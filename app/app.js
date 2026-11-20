@@ -31,7 +31,7 @@ const DEFAULT = () => ({
   v: 2,
   profile: { name: "", sex: "m", age: 27, height: 181, weight: 61.5, train: 5, wake: "04:30", bed: "20:00", bedNow: "", shiftStart: "", creatine: false, setup: false, u: 0 },
   goal: { type: "ganhar", start: 61.5, startDate: todayKey(), target: 69.5, endDate: keyOf(addDays(new Date(), 91)), u: 0 },
-  sleep: {}, days: {}, weights: {}, badges: {}, custom: {}, shop: {}
+  sleep: {}, days: {}, weights: {}, badges: {}, custom: {}, shop: {}, fichas: {}
 });
 let S = DEFAULT();
 let uid = null;            // id da conta (null = só neste aparelho)
@@ -61,7 +61,7 @@ function flag(name, val) { try { if (val === undefined) return localStorage.getI
 function normalize(x) {
   const d = DEFAULT(); x = x || {};
   return { v: 2, profile: { ...d.profile, ...(x.profile || {}) }, goal: { ...d.goal, ...(x.goal || {}) },
-    sleep: x.sleep || {}, days: x.days || {}, weights: x.weights || {}, badges: x.badges || {}, custom: x.custom || {}, shop: x.shop || {} };
+    sleep: x.sleep || {}, days: x.days || {}, weights: x.weights || {}, badges: x.badges || {}, custom: x.custom || {}, shop: x.shop || {}, fichas: x.fichas || {} };
 }
 /* Junta dois estados sem perder nada: em cada item vence a edição mais recente. */
 function mergeMap(a, b) {
@@ -76,7 +76,7 @@ function merge(a, b) {
     profile: (b.profile.u || 0) > (a.profile.u || 0) ? b.profile : a.profile,
     goal: (b.goal.u || 0) > (a.goal.u || 0) ? b.goal : a.goal,
     sleep: mergeMap(a.sleep, b.sleep), days: mergeMap(a.days, b.days),
-    weights: mergeMap(a.weights, b.weights), badges: { ...b.badges, ...a.badges }, custom: mergeMap(a.custom, b.custom), shop: mergeMap(a.shop, b.shop)
+    weights: mergeMap(a.weights, b.weights), badges: { ...b.badges, ...a.badges }, custom: mergeMap(a.custom, b.custom), shop: mergeMap(a.shop, b.shop), fichas: mergeMap(a.fichas, b.fichas)
   };
 }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -84,8 +84,12 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 function commit() { lsWrite(); schedulePush(); }
 
 const sleepOf = k => { const e = S.sleep[k]; return e && !e.del ? e : null; };
-const getDay = k => ({ meals: {}, water: 0, gut: 0, habits: {}, ...(S.days[k || todayKey()] || {}) });
-function editDay(fn, k) { k = k || todayKey(); const d = getDay(k); fn(d); d.u = Date.now(); S.days[k] = d; commit(); }
+/* Dia em edição: hoje por padrão; dá para voltar e corrigir dias anteriores. */
+let curDay = todayKey(), dayPinned = false;
+const isToday = () => curDay === todayKey();
+function dayLabel(k) { const t = todayKey(); if (k === t) return "Hoje"; if (k === keyOf(addDays(new Date(), -1))) return "Ontem"; return parseKey(k).toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, ""); }
+const getDay = k => ({ meals: {}, water: 0, gut: 0, habits: {}, ...(S.days[k || curDay] || {}) });
+function editDay(fn, k) { k = k || curDay; const d = getDay(k); fn(d); d.u = Date.now(); S.days[k] = d; commit(); }
 const weightList = () => Object.keys(S.weights).filter(k => !S.weights[k].del).sort().map(k => ({ d: k, kg: S.weights[k].kg }));
 const currentWeight = () => { const w = weightList(); return w.length ? w[w.length - 1].kg : S.profile.weight; };
 
@@ -248,13 +252,27 @@ function optView(fi, o, f) {
   return { ...o, kcal: Math.round(o.k * k / 10) * 10, prot: Math.round(o.p * k),
     items: o.i.map(([n, q, u]) => q ? `${n} · ${scaleQty(q, u, k)} ${u}` : n) };
 }
-function mealPlan(T) {
-  const p = effP(), f = portion(T);
-  return FICHAS.map(fi => {
-    const options = fi.opts.map(o => optView(fi, o, f));
-    const avg = Math.round(options.reduce((a, o) => a + o.kcal, 0) / options.length), avgP = Math.round(options.reduce((a, o) => a + o.prot, 0) / options.length);
-    for (const cid in S.custom) { const c = S.custom[cid]; if (c && !c.del && c.meal === fi.id) options.push({ t: c.t, tag: "Minha ficha", kcal: c.k || avg, prot: c.p || avgP, items: c.d ? [c.d] : [], cid }); }
-    return { ...fi, min: ((fi.at(p) % 1440) + 1440) % 1440, options, avg, avgP };
+function autoMin(fi) { return ((fi.at(effP()) % 1440) + 1440) % 1440; }
+function mealPlan(T, all) {
+  const f = portion(T), mt = S.profile.mealTimes || {}, off = S.profile.mealOff || {};
+  return FICHAS.filter(fi => all || !off[fi.id]).map(fi => {
+    const options = fi.opts.map((o, i) => {
+      const v = optView(fi, o, f), key = fi.id + ":" + i, ov = S.fichas[key];
+      v.key = key;
+      if (ov && !ov.del) {
+        if (ov.t) { v.t = ov.t; v.edited = true; }
+        if (ov.tag != null) v.tag = ov.tag;
+        if (ov.items) { v.items = ov.items; v.edited = true; }
+        if (ov.k) { v.kcal = ov.k; v.edited = true; }
+        if (ov.p != null && ov.p !== "") v.prot = ov.p;
+        v.hidden = !!ov.hidden;
+      }
+      return v;
+    });
+    const vis = options.filter(o => !o.hidden), base = vis.length ? vis : options;
+    const avg = Math.round(base.reduce((a, o) => a + o.kcal, 0) / base.length), avgP = Math.round(base.reduce((a, o) => a + o.prot, 0) / base.length);
+    for (const cid in S.custom) { const c = S.custom[cid]; if (c && !c.del && c.meal === fi.id) options.push({ t: c.t, tag: c.tag || "Minha ficha", kcal: c.k || avg, prot: c.p != null ? c.p : avgP, items: c.items || (c.d ? [c.d] : []), cid }); }
+    return { ...fi, min: mt[fi.id] ? toMin(mt[fi.id]) : autoMin(fi), auto: !mt[fi.id], off: !!off[fi.id], options, avg, avgP };
   }).sort((a, b) => a.min - b.min);
 }
 /* Registro de uma refeição: ficha pronta {i}, ficha minha {c} ou texto livre {t,k,p}; q = quanto comeu. */
@@ -277,20 +295,73 @@ function eatenOn(k, plan) {
 function routine() {
   const p = effP(), W = toMin(p.wake), B = toMin(p.bed);
   return [
-    { m: W, t: "Acordar", s: "Mesmo horário todo dia, inclusive fim de semana" },
-    { m: W + 5, t: "Luz forte", s: "Luz do dia ou lâmpada forte logo ao acordar" },
-    { m: B - 360, t: "Último café", s: "Cafeína só até 6 horas antes de deitar" },
-    { m: B - 120, t: "Jantar", s: "Última refeição grande" },
-    { m: B - 60, t: "Fim do treino pesado", s: "Exercício intenso fora da última hora" },
-    { m: B - 45, t: "Modo noite", s: "Luzes baixas, telas interativas fora, ceia leve" },
-    { m: B - 10, t: "Celular fora da cama", s: "O que mais atrapalha é tela já na cama" },
-    { m: B, t: "Dormir", s: `Meta: ${durLong(((W - B) + 1440) % 1440)} de sono` }
+    { m: W, t: "Acordar", s: "Mesmo horário todo dia, inclusive fim de semana.", src: "Horário fixo de acordar é o ponto de partida das diretrizes para ajustar o relógio biológico (AASM)." },
+    { m: W + 5, t: "Luz forte", s: "Luz do dia ou lâmpada forte logo ao acordar.", src: "Luz forte de manhã adianta o relógio e faz o sono chegar mais cedo; luz forte à noite atrasa (CDC, NHLBI)." },
+    { m: B - 360, t: "Último café", s: "Cafeína só até 6 horas antes de deitar.", src: "400 mg de cafeína até 6 h antes de deitar ainda tiraram mais de 1 h de sono (Drake e colegas, 2013). O NICE é mais rígido: nada depois do meio-dia." },
+    { m: B - 120, t: "Jantar", s: "Última refeição grande do dia.", src: "Evitar refeição grande nas 2 h antes de deitar (NICE, guia de insônia). Um lanche pequeno depois está liberado." },
+    { m: B - 60, t: "Fim do treino pesado", s: "Exercício intenso fora da última hora.", src: "Exercício melhora a qualidade do sono (81 ensaios, 2024), mas o vigoroso na última hora antes de deitar atrapalha (NICE)." },
+    { m: B - 45, t: "Modo noite", s: "Luzes baixas, telas interativas fora, ceia leve.", src: "Ler em tablet antes de dormir reduziu a melatonina em cerca de 55% e atrasou o relógio em 1h30 (PNAS, 2015)." },
+    { m: B - 10, t: "Celular fora da cama", s: "Na cama, sem tela.", src: "O que mais tirou sono foi usar tela já na cama, principalmente jogo ou chat: cada 10 min de jogo, 17 min a menos de sono (JAMA Pediatrics, 2024)." },
+    { m: B, t: "Dormir", s: `Meta: ${durLong(((W - B) + 1440) % 1440)} de sono.`, src: "Adultos: 7 horas ou mais por noite. Mais de 9 h pode ser adequado para quem está recuperando sono (AASM e Sleep Research Society)." }
   ].map(r => ({ ...r, m: ((r.m % 1440) + 1440) % 1440 })).sort((a, b) => a.m - b.m);
 }
 const sleepDur = e => ((toMin(e.wake) - toMin(e.bed)) + 1440) % 1440;
 function sleepScore(e) {
   const p = S.profile, goal = Math.max(420, ((toMin(p.wake) - toMin(p.bed)) + 1440) % 1440 - 30);
   return Math.round(Math.min(1, sleepDur(e) / goal) * 60 + (e.q || 3) / 5 * 30 + (e.wakes === 0 ? 10 : e.wakes === 1 ? 5 : 0));
+}
+const goalDur = () => ((toMin(S.profile.wake) - toMin(S.profile.bed)) + 1440) % 1440;
+const eveMin = m => (m < 720 ? m + 1440 : m); // horário de deitar contado a partir do meio-dia
+const sd = a => { if (a.length < 2) return 0; const m = a.reduce((x, y) => x + y, 0) / a.length; return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length); };
+function sleepAnalysis() {
+  const N = lastNights(14).filter(x => x.e).map(x => x.e), L7 = lastNights(7).filter(x => x.e).map(x => x.e);
+  const P7 = lastNights(14).slice(0, 7).filter(x => x.e).map(x => x.e);
+  const need = Math.max(420, goalDur());
+  const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+  const durs = N.map(sleepDur), beds = N.map(e => eveMin(toMin(e.bed))), wakesT = N.map(e => toMin(e.wake));
+  const A = {
+    n: N.length, avgDur: avg(durs), avgBed: avg(beds) % 1440, avgWake: avg(wakesT),
+    sdBed: sd(beds), sdWake: sd(wakesT), debt: L7.reduce((s, e) => s + Math.max(0, need - sleepDur(e)), 0),
+    pct7: N.length ? N.filter(e => sleepDur(e) >= 420).length / N.length : 0,
+    lat: avg(N.filter(e => e.lat != null).map(e => e.lat)), latN: N.filter(e => e.lat != null).length,
+    wakes: avg(N.map(e => e.wakes || 0)), q: avg(N.map(e => e.q || 0)),
+    trend: L7.length >= 3 && P7.length >= 3 ? avg(L7.map(sleepDur)) - avg(P7.map(sleepDur)) : null, need, F: []
+  };
+  if (A.n < 3) return A;
+  const F = A.F, reg = Math.max(A.sdBed, A.sdWake);
+  if (A.avgDur < 360) F.push(["bad", "Você está dormindo pouco", `Média de ${dur(A.avgDur)} por noite. Abaixo de 6 h, o corpo não recupera e a fome e o cansaço aumentam.`, "Recomendação: 7 h ou mais (AASM)."]);
+  else if (A.avgDur < 420) F.push(["warn", "Quase lá na duração", `Média de ${dur(A.avgDur)}. Faltam ${durLong(420 - A.avgDur)} por noite para as 7 h.`, "Recomendação: 7 h ou mais (AASM)."]);
+  else F.push(["good", "Duração boa", `Média de ${dur(A.avgDur)} por noite, dentro da recomendação.`, "Recomendação: 7 h ou mais (AASM)."]);
+  if (reg > 60) F.push(["bad", "Horários irregulares", `Seu horário varia cerca de ${Math.round(reg)} min de uma noite para outra. Isso confunde o relógio biológico.`, "Fixe o horário de acordar, inclusive no fim de semana."]);
+  else if (reg > 30) F.push(["warn", "Horários um pouco soltos", `Variação de cerca de ${Math.round(reg)} min entre as noites.`, "Tente manter a diferença abaixo de 30 min."]);
+  else F.push(["good", "Horários regulares", `Variação de só ${Math.round(reg)} min entre as noites.`, "Regularidade ajuda a pegar no sono mais rápido."]);
+  const late = A.avgBed - eveMin(toMin(S.profile.bed));
+  if (late > 45) F.push(["warn", `Deitando ${durLong(late)} depois da meta`, `Você deita em média às ${fromMin(A.avgBed)}; a meta é ${S.profile.bed}.`, "Adiante 15 a 30 min por vez, nunca tudo de uma vez."]);
+  if (A.debt >= 300) F.push(["bad", "Débito de sono alto", `Faltaram ${durLong(A.debt)} para a sua meta de ${dur(A.need)} por noite, somando os últimos 7 dias.`, "Recupere aos poucos: deitar 30 min mais cedo por alguns dias."]);
+  else if (A.debt >= 120) F.push(["warn", "Débito de sono", `Faltaram ${durLong(A.debt)} para a sua meta de ${dur(A.need)} por noite nos últimos 7 dias.`, "Pequenas compensações ajudam; o que mais conta é a regularidade."]);
+  if (A.wakes >= 1) { const reasons = {}; N.forEach(e => (e.why || []).forEach(r => reasons[r] = (reasons[r] || 0) + 1)); const top = Object.entries(reasons).sort((a, b) => b[1] - a[1])[0];
+    F.push([A.wakes >= 2 ? "bad" : "warn", "Despertares no meio da noite", `${fmt(A.wakes, 1)} por noite em média${top ? `; o mais comum é ${top[0].toLowerCase()}` : ""}.`, top && top[0] === "Banheiro" ? "Reduza líquidos na última hora antes de deitar." : "Em quem tem enxaqueca, cada despertar aumentou 17% a chance de crise no dia seguinte."]); }
+  if (A.latN >= 3 && A.lat > 30) F.push(["warn", "Demora para pegar no sono", `Cerca de ${Math.round(A.lat)} min para dormir, em média.`, "Se não dormir em ~20 min, levante e volte com sono. Persistindo, a terapia TCC-I é o tratamento de 1ª linha."]);
+  const sc = N.filter(e => e.screen && e.screen !== "nao"), ns = N.filter(e => e.screen === "nao");
+  if (sc.length >= 2 && ns.length >= 2) { const dd = avg(ns.map(sleepDur)) - avg(sc.map(sleepDur)); if (dd > 10) F.push(["warn", "Tela na cama custa sono", `Nas noites com tela na cama você dormiu ${durLong(dd)} a menos.`, "Celular fora da cama é o hábito com mais efeito nos estudos."]); }
+  return A;
+}
+function sleepTimesChart() {
+  const p = S.profile, nights = lastNights(14);
+  const W = 340, H = 170, L = 34, R = 6, top = 8, bot = 22, cw = (W - L - R) / nights.length;
+  const t = m => ((m - 1080) + 1440) % 1440; // minutos a partir das 18h
+  const y = m => top + (H - top - bot) * (t(m) / 1080);
+  let g = "";
+  [[1080, "18h"], [1320, "22h"], [120, "2h"], [360, "6h"], [600, "10h"]].forEach(([m, l]) => { g += `<line x1="${L}" x2="${W - R}" y1="${y(m)}" y2="${y(m)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(m) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${l}</text>`; });
+  const tb = toMin(p.bed), tw = toMin(p.wake);
+  g += `<rect x="${L}" y="${y(tb)}" width="${W - L - R}" height="${Math.max(0, y(tw) - y(tb))}" fill="var(--sleep)" opacity=".07"/>`;
+  nights.forEach((n, i) => {
+    const x = L + i * cw + cw * 0.25, bw = cw * 0.5;
+    if (n.e) { const a = toMin(n.e.bed), b = toMin(n.e.wake); if (t(b) > t(a)) g += `<rect x="${x}" y="${y(a)}" width="${bw}" height="${y(b) - y(a)}" rx="${bw / 2}" fill="var(--sleep)"><title>${shortDate(n.k)}: ${n.e.bed} → ${n.e.wake}</title></rect>`; }
+    const last = i === nights.length - 1;
+    g += `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" font-size="10" fill="${last ? "var(--fg)" : "var(--muted)"}" font-weight="${last ? 700 : 400}">${WD[parseKey(n.k).getDay()][0].toUpperCase()}</text>`;
+  });
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Horário em que dormiu e acordou nas últimas 14 noites">${g}</svg></div>`;
 }
 function lastNights(n) { const out = [], t = new Date(); for (let i = n - 1; i >= 0; i--) { const k = keyOf(addDays(t, -i)); out.push({ k, e: sleepOf(k) }); } return out; }
 
@@ -432,11 +503,13 @@ const IC = {
   trophy: s => svg('<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.500a3.500 3.500 0 0 0 3.500 4M16 6h3.500a3.500 3.500 0 0 1-3.500 4M12 13v4M8.500 20h7M10 17h4"/>', s),
   check: s => `<svg width="${s || 15}" height="${s || 15}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.200" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.500 4.500 4.500L19 7.500"/></svg>`,
   spark: () => '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.200 6.600L21 11l-6.800 2.400L12 20l-2.200-6.600L3 11l6.800-2.400z"/></svg>',
+  cart: s => svg('<path d="M3 4h2l2.400 11.200a1 1 0 0 0 1 .800h9.200a1 1 0 0 0 1-.800L21 8H6.200"/><circle cx="9.500" cy="20" r="1.300"/><circle cx="17" cy="20" r="1.300"/>', s),
+  edit: s => svg('<path d="M4 20h4L19 9a2.800 2.800 0 0 0-4-4L4 16z"/><path d="M13.500 6.500l4 4"/>', s),
   gear: s => svg('<circle cx="12" cy="12" r="3"/><path d="M19.400 13a7.500 7.500 0 0 0 0-2l2-1.500-2-3.400-2.300 1a7.500 7.500 0 0 0-1.700-1L15 3.500h-4l-.400 2.600a7.500 7.500 0 0 0-1.700 1l-2.300-1-2 3.400L6.600 11a7.500 7.500 0 0 0 0 2l-2 1.500 2 3.400 2.300-1a7.500 7.500 0 0 0 1.700 1l.400 2.600h4l.400-2.600a7.500 7.500 0 0 0 1.700-1l2.300 1 2-3.400z"/>', s),
   auto: s => svg('<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/>', s),
   arrow: s => svg('<path d="M5 12h14M13 6l6 6-6 6"/>', s || 18)
 };
-const TABS = [["hoje", "Hoje", "home"], ["sono", "Sono", "moon"], ["comida", "Comida", "bowl"], ["meta", "Meta", "target"], ["perfil", "Ajustes", "gear"]];
+const TABS = [["hoje", "Hoje", "home"], ["sono", "Sono", "moon"], ["comida", "Comida", "bowl"], ["compras", "Compras", "cart"], ["meta", "Meta", "target"], ["perfil", "Ajustes", "gear"]];
 
 /* ================= mascote: Broto ================= */
 function mascot(mood, size, body, live) {
@@ -496,38 +569,40 @@ function ring(pct, size, color, inner, track) {
 
 /* ================= HOJE ================= */
 function renderHoje() {
-  const { T, plan } = ctx(), p = S.profile, k = todayKey(), d = getDay(k), now = nowMin(), P = progress();
+  const { T, plan } = ctx(), p = S.profile, k = curDay, d = getDay(k), now = nowMin(), P = progress(), today = isToday();
   const hour = new Date().getHours();
   const hi = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const name = p.name ? `, ${esc(p.name.split(" ")[0])}` : "";
   const score = P.scores[k] ?? dayScore(k);
   const eat = eatenOn(k, plan), H = habitList(), e = sleepOf(k);
-  const msg = score >= 85 ? "Dia redondo. Bom trabalho." : score >= 60 ? "Dia forte. Falta pouco." : score >= 30 ? "Bom começo. Siga daí." : hour < 12 ? "Comece pela noite e pelo café." : "Ainda dá tempo de salvar o dia.";
+  const msg = !today ? (score >= 85 ? "Foi um dia redondo." : score >= 60 ? "Foi um dia forte." : score > 0 ? "Dia registrado em parte." : "Nada registrado nesse dia.") : score >= 85 ? "Dia redondo. Bom trabalho." : score >= 60 ? "Dia forte. Falta pouco." : score >= 30 ? "Bom começo. Siga daí." : hour < 12 ? "Comece pela noite e pelo café." : "Ainda dá tempo de salvar o dia.";
+  const daynav = `<div class="daynav"><button data-a="day" data-d="-1" aria-label="Dia anterior">‹</button><span class="dl">${dayLabel(k)}</span><button data-a="day" data-d="1" aria-label="Próximo dia" ${today ? "disabled" : ""}>›</button>${today ? `<span class="small muted dh">Toque em ‹ para corrigir dias anteriores</span>` : `<button class="link small" data-a="day" data-d="0">Voltar para hoje</button>`}</div>`;
 
   const events = [...routine().map(r => ({ ...r, kind: "sleep" })), ...plan.map(m => ({ m: m.min, t: m.n, kind: "food", id: m.id }))].sort((a, b) => a.m - b.m);
   const nx = events.find(ev => ev.m > now && !(ev.kind === "food" && d.meals[ev.id] != null)) || { ...events[0], m: events[0].m + 1440 };
-  const currentMeal = [...plan].reverse().find(m => m.min <= now + 30 && d.meals[m.id] == null);
+  const currentMeal = today ? [...plan].reverse().find(m => m.min <= now + 30 && d.meals[m.id] == null) : null;
 
   const sc = e ? sleepScore(e) : 0;
   const sleepRow = e
     ? `<button class="rowcard" data-a="sleep"><span class="ric sleep">${IC.moon(20)}</span><span class="rbody"><b>${durLong(sleepDur(e))} de sono</b><small class="num">${e.bed} → ${e.wake}${e.wakes ? ` · ${e.wakes} despertar${e.wakes > 1 ? "es" : ""}` : ""}</small></span><span class="pill ${sc >= 80 ? "good" : sc >= 60 ? "warn" : "bad"}">${sc} pts</span></button>`
-    : `<button class="rowcard cta" data-a="sleep"><span class="ric sleep">${IC.moon(20)}</span><span class="rbody"><b>Como você dormiu?</b><small>Registre a noite em 10 segundos</small></span><span class="chev">›</span></button>`;
+    : `<button class="rowcard cta" data-a="sleep"><span class="ric sleep">${IC.moon(20)}</span><span class="rbody"><b>${today ? "Como você dormiu?" : "Registrar a noite desse dia"}</b><small>Leva 10 segundos</small></span><span class="chev">›</span></button>`;
   const nextRow = `<${nx.kind === "food" ? `button data-a="ficha" data-id="${nx.id}"` : "div"} class="rowcard"><span class="ric ${nx.kind === "food" ? "food" : "sleep"}">${nx.kind === "food" ? IC.bowl(20) : IC.sun(20)}</span><span class="rbody"><small>Próximo · em ${durLong(nx.m - now)}</small><b>${esc(nx.t)}</b></span><span class="clock num">${fromMin(nx.m)}</span></${nx.kind === "food" ? "button" : "div"}>`;
   const ins = insights(), insight = ins[hash(k) % ins.length];
 
   return `${header(`${hi}${name}`)}
+  ${daynav}
   <div class="cols">
    <div class="col">
     <section class="hero">
       ${mascot(moodNow(score), 96, null, true)}
       <div class="hero-top">
         ${ring(score / 100, 96, "#10240F", `<text x="48" y="53" text-anchor="middle" style="font-family:var(--f-display)" font-size="30" font-weight="600">${score}</text><text x="48" y="69" text-anchor="middle" font-size="10" opacity=".7">de 100</text>`, "rgba(16,36,15,.14)")}
-        <div style="min-width:0"><div class="lbl">Seu dia</div><div class="big">${msg}</div></div>
+        <div style="min-width:0"><div class="lbl">${today ? "Seu dia" : dayLabel(k)}</div><div class="big">${msg}</div></div>
       </div>
       <div class="hero-chips"><span class="hchip">${IC.flame(14)} ${P.streak} ${P.streak === 1 ? "dia seguido" : "dias seguidos"}</span><span class="hchip">Nível ${P.lvl + 1}</span></div>
     </section>
     ${sleepRow}
-    ${nextRow}
+    ${today ? nextRow : ""}
     <div class="card">
       <div class="qrow"><span class="ql"><b>Água</b><small class="num">${d.water} de ${T.water} copos</small></span><div class="mini"><button data-a="water" data-d="-1" aria-label="Menos um copo">−</button><button class="plus" data-a="water" data-d="1" aria-label="Mais um copo">+</button></div></div>
       <div class="qrow"><span class="ql"><b>Intestino</b><small class="num">${d.gut} ${d.gut === 1 ? "vez" : "vezes"} hoje</small></span><div class="mini"><button data-a="gut" data-d="-1" aria-label="Menos uma">−</button><button class="plus" data-a="gut" data-d="1" aria-label="Mais uma">+</button></div></div>
@@ -537,15 +612,15 @@ function renderHoje() {
    </div>
    <div class="col">
     <div class="card">
-      <div class="row between"><h2>Refeições</h2><span class="small muted num">${eat.n} de ${plan.length}</span></div>
+      <div class="row between"><h2>Refeições</h2><a class="link small" href="#comida">Ver fichas</a></div>
       <div><div class="bar" style="height:8px"><span style="width:${Math.min(100, eat.kcal / T.kcal * 100)}%"></span></div>
-        <div class="mline" style="margin:8px 0 0"><span class="small muted num">${fmt(eat.kcal)} de ${fmt(T.kcal)} kcal</span><span class="small muted num">${fmt(eat.prot)} de ${fmt(T.prot)} g proteína</span></div></div>
+        <div class="mline" style="margin:8px 0 0"><span class="small muted num">${eat.n} de ${plan.length} · ${fmt(eat.kcal)} de ${fmt(T.kcal)} kcal</span><span class="small muted num">${fmt(eat.prot)} de ${fmt(T.prot)} g proteína</span></div></div>
       <div>${plan.map(m => { const o = resolve(m, entryOf(d, m.id));
         return `<button class="meal ${o ? "on" : ""}" data-a="ficha" data-id="${m.id}"><span class="check">${IC.check(15)}</span>
           <span class="meal-body"><span class="n">${m.n}${currentMeal && currentMeal.id === m.id ? '<span class="tagnow">agora</span>' : ""}</span><span class="d" style="display:${o ? "block" : "none"}">${o ? `${esc(o.t)}${o.q !== 1 && !o.free ? ` (${o.q < 1 ? "metade" : "repeti"})` : ""} · ${o.kcal} kcal` : ""}</span></span>
           <span class="t">${fromMin(m.min)}</span></button>`; }).join("")}</div>
     </div>
-    <p class="tipline">${IC.spark()}<span>${esc(insight)}</span></p>
+    ${today ? `<p class="tipline">${IC.spark()}<span>${esc(insight)}</span></p>` : ""}
    </div>
   </div>`;
 }
@@ -578,7 +653,19 @@ function renderSono() {
   const wakes = n7.length ? n7.reduce((s, e) => s + (e.wakes || 0), 0) / n7.length : 0;
   const head = n7.filter(e => e.head).length;
   const logs = Object.keys(S.sleep).filter(sleepOf).sort().reverse().slice(0, 12);
-  const R = routine(), nextIdx = R.findIndex(r => r.m > now);
+  const R = routine(), nextIdx = R.findIndex(r => r.m > now), A = sleepAnalysis();
+  const reg = Math.round(Math.max(A.sdBed, A.sdWake));
+  const analysis = A.n >= 3 ? `<div class="card">
+      <div class="row between"><h2>Análise do sono</h2><span class="small muted">últimas ${A.n} noites</span></div>
+      <div class="stats s4">
+        <div class="stat"><div class="v num">${dur(A.avgDur)}</div><div class="l">média por noite</div></div>
+        <div class="stat"><div class="v num">${A.debt ? dur(A.debt) : "0h"}</div><div class="l">abaixo da meta (7 dias)</div></div>
+        <div class="stat"><div class="v num">±${reg}<small> min</small></div><div class="l">variação de horário</div></div>
+        <div class="stat"><div class="v num">${Math.round(A.pct7 * 100)}%</div><div class="l">noites com 7 h+</div></div>
+      </div>
+      <div class="mline" style="margin:0"><span class="small muted num">Deita em média ${fromMin(A.avgBed)} · acorda ${fromMin(A.avgWake)}</span>${A.trend != null ? `<span class="small ${A.trend >= 0 ? "good-t" : "bad-t"} num">${A.trend >= 0 ? "+" : "−"}${durLong(Math.abs(A.trend))} vs semana anterior</span>` : ""}</div>
+      <div class="findings">${A.F.map(([lv, t, d, src]) => `<div class="finding ${lv}"><i></i><div><b>${esc(t)}</b><p>${esc(d)}</p><span class="src">${esc(src)}</span></div></div>`).join("")}</div>
+    </div>` : `<div class="card"><h2>Análise do sono</h2><p class="small muted">Com 3 noites registradas, aparece aqui o diagnóstico: média de sono, débito, regularidade dos horários, despertares e o que mais está pesando. ${A.n ? `Faltam ${3 - A.n}.` : ""}</p></div>`;
   const shift = E.left > 0 ? `<div class="card"><div class="row between"><span class="eyebrow">Transição até ${E.targetBed}</span><span class="small muted">faltam ~${E.daysLeft} dias</span></div>
       <div class="shift"><div><div class="tb">${E.bed}</div><div class="small muted">deitar hoje</div></div><div style="min-width:0"><b>Acordar às ${E.wake}</b><p class="small muted">15 minutos mais cedo a cada 2 dias.</p></div></div>
       <div class="bar" style="height:8px"><span style="width:${Math.max(4, (1 - E.left / E.total) * 100)}%;background:var(--sleep)"></span></div></div>` : "";
@@ -586,7 +673,9 @@ function renderSono() {
   <div class="cols">
    <div class="col">
     ${shift}
-    <button class="btn sleep block" data-a="sleep">${IC.moon(20)} ${sleepOf(todayKey()) ? "Editar a noite de hoje" : "Registrar a noite de hoje"}</button>
+    <button class="btn sleep block" data-a="sleep" data-k="${todayKey()}">${IC.moon(20)} ${sleepOf(todayKey()) ? "Editar a noite de hoje" : "Registrar a noite de hoje"}</button>
+    ${analysis}
+    ${A.n ? `<div class="card"><div class="row between"><h2>Que horas você dorme</h2><span class="small muted">14 noites</span></div>${sleepTimesChart()}<div class="legend"><span><i style="background:var(--sleep)"></i>tempo na cama</span><span><i style="background:var(--sleep);opacity:.18"></i>sua meta (${S.profile.bed} → ${S.profile.wake})</span></div></div>` : ""}
     <div class="card">
       <div class="row between"><h2>Últimos 7 dias</h2><span class="small muted">${n7.length} de 7 noites</span></div>
       ${n7.length ? `<div class="stats">
@@ -606,7 +695,8 @@ function renderSono() {
    <div class="col">
     <div class="card">
       <div class="row between"><h2>Rotina de hoje</h2><a class="link small" href="#perfil">Mudar horários</a></div>
-      <div class="timeline">${R.map((r, i) => `<div class="tl ${r.m <= now ? "past" : ""} ${i === nextIdx ? "nextup" : ""}"><span class="h">${fromMin(r.m)}</span><span class="rail"><b></b></span><div class="x"><strong>${r.t}</strong>${i === nextIdx ? `<span>${r.s}</span>` : ""}</div></div>`).join("")}</div>
+      <p class="small muted" style="margin-top:-6px">Toque em um horário para ver o que dizem os estudos.</p>
+      <div class="timeline">${R.map((r, i) => `<div class="tl ${r.m <= now ? "past" : ""} ${i === nextIdx ? "nextup" : ""}"><span class="h">${fromMin(r.m)}</span><span class="rail"><b></b></span><details class="x" ${i === nextIdx ? "open" : ""}><summary><strong>${r.t}</strong></summary><span>${r.s}</span><span class="why">${esc(r.src)}</span></details></div>`).join("")}</div>
       ${!p.bedNow ? `<p class="small muted">Ainda não dorme às ${p.bed}? Informe em <a href="#perfil">Ajustes</a> a hora em que dorme hoje, e o app adianta 15 minutos a cada 2 dias.</p>` : ""}
       <details><summary>De onde vem cada horário</summary><div class="stack">
         <p><b>Horário fixo de acordar</b> é a base. Para adiantar a hora de dormir, mude 15 a 30 minutos por vez.</p>
@@ -625,11 +715,11 @@ function renderSono() {
 function optCard(m, o, i, en) {
   const on = isChosen(en, o, i);
   return `<button class="opt ${on ? "on" : ""}" data-a="pick" data-id="${m.id}" data-i="${i}" aria-pressed="${on}">
-    <span class="ob"><span class="letter">${"ABCDEFGH"[i] || "+"}</span><span class="tag">${esc(o.tag)}</span></span>
+    <span class="ob"><span class="letter">${"ABCDEFGH"[i] || "+"}</span>${o.tag ? `<span class="tag">${esc(o.tag)}${o.edited ? " · editada" : ""}</span>` : ""}</span>
     <span class="title">${esc(o.t)}</span>
     <ul>${o.items.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
     <span class="mac"><span>${o.kcal} kcal</span><span class="p">${o.prot} g proteína</span></span>
-    <span class="pick">${on ? "Comi esta hoje ✓" : "Marcar como feita"}</span></button>`;
+    <span class="pick">${on ? "Comi esta ✓" : "Marcar como feita"}</span></button>`;
 }
 let foodView = "fichas";
 const shopItems = () => Object.keys(S.shop).filter(k => !S.shop[k].del).map(k => ({ id: k, ...S.shop[k] })).sort((a, b) => (a.done - b.done) || (a.c || 0) - (b.c || 0));
@@ -640,11 +730,11 @@ function shopAdd(t) {
 }
 /* Monta a lista a partir das fichas que você marcou nos últimos 7 dias (ou da opção A de cada refeição). */
 function shopFromFichas() {
-  const { plan } = ctx(), names = new Set();
+  const { plan } = ctx(), names = new Set(), add = o => (o.items || []).forEach(x => names.add(String(x).split(" · ")[0].replace(/ com azeite e limão/, "").trim()));
   for (let i = 0; i < 7; i++) { const d = getDay(keyOf(addDays(new Date(), -i)));
-    for (const m of plan) { const en = entryOf(d, m.id); if (en && en.i != null && !en.c && m.opts[en.i]) m.opts[en.i].i.forEach(x => names.add(x[0])); } }
-  if (!names.size) plan.forEach(m => m.opts[0].i.forEach(x => names.add(x[0])));
-  let n = 0; names.forEach(t => { if (shopAdd(t.replace(/ com azeite e limão/, ""))) n++; });
+    for (const m of plan) { const en = entryOf(d, m.id); if (!en) continue; const o = en.c ? m.options.find(x => x.cid === en.c) : en.i != null ? m.options[en.i] : null; if (o) add(o); } }
+  if (!names.size) plan.forEach(m => { const o = m.options.find(x => !x.hidden); if (o) add(o); });
+  let n = 0; names.forEach(t => { if (t && shopAdd(t)) n++; });
   return n;
 }
 function renderCompras() {
@@ -660,15 +750,13 @@ function renderCompras() {
   ${done.length ? `<div class="card"><div class="row between"><h2>Já comprado</h2><button class="link small" data-a="shop-clear">Limpar comprados</button></div><div>${done.map(row).join("")}</div></div>` : ""}`;
 }
 function renderComida() {
-  const { T, plan } = ctx(), p = S.profile, d = getDay(), eat = eatenOn(todayKey(), plan), f = portion(T), I = goalInfo();
-  const pending = shopItems().filter(x => !x.done).length;
-  const switcher = `<div class="seg" data-seg="foodview"><button type="button" class="${foodView === "fichas" ? "on" : ""}" data-v="fichas">Fichas</button><button type="button" class="${foodView === "compras" ? "on" : ""}" data-v="compras">Lista de compras${pending ? ` (${pending})` : ""}</button></div>`;
-  if (foodView === "compras") return `${header("Alimentação", "Lista de compras da semana")}${switcher}${renderCompras()}`;
+  const { T, plan } = ctx(), p = S.profile, d = getDay(), eat = eatenOn(curDay, plan), f = portion(T), I = goalInfo();
+  const switcher = isToday() ? "" : `<div class="pastbar"><span>Registrando as refeições de <b>${dayLabel(curDay).toLowerCase()}</b></span><button class="link small" data-a="day" data-d="0">Voltar para hoje</button></div>`;
   const adjTxt = T.adjPct > 0 ? `${fmt(T.tdee)} de gasto + ${Math.round(T.adjPct * 100)}% para ganhar` : T.adjPct < 0 ? `${fmt(T.tdee)} de gasto − ${Math.round(-T.adjPct * 100)}% para perder` : `igual ao seu gasto estimado`;
   return `${header("Alimentação", `${I.G.label} · ${fmt(T.w, 1)} kg · treino ${p.train}×/sem`)}
   ${switcher}
   <div class="card">
-    <div class="kcal-head"><div><div class="eyebrow">Meta de hoje</div><div class="v num">${fmt(T.kcal)}<small> kcal</small></div></div><span class="small muted num">${fmt(eat.kcal)} kcal · ${fmt(eat.prot)} g proteína hoje</span></div>
+    <div class="kcal-head"><div><div class="eyebrow">Meta diária</div><div class="v num">${fmt(T.kcal)}<small> kcal</small></div></div><span class="small muted num">${fmt(eat.kcal)} kcal · ${fmt(eat.prot)} g proteína ${isToday() ? "hoje" : dayLabel(curDay).toLowerCase()}</span></div>
     <div class="bar" style="height:9px"><span style="width:${Math.min(100, eat.kcal / T.kcal * 100)}%"></span></div>
     <details><summary>Macros e como calculamos</summary><div class="stack">
       <div class="targets">
@@ -683,9 +771,9 @@ function renderComida() {
     </div></details>
   </div>
   ${plan.map(m => `<section class="card" id="f-${m.id}">
-    <div class="ficha-head"><div class="stack" style="gap:2px"><span class="time">${fromMin(m.min)}</span><h2>${m.n}</h2></div>${d.meals[m.id] != null ? '<span class="pill good">Feita hoje</span>' : `<button class="btn sm ghost" data-a="ficha" data-id="${m.id}">Comi outra coisa</button>`}</div>
-    <div class="opts">${m.options.map((o, i) => optCard(m, o, i, entryOf(d, m.id))).join("")}</div>
-    <span class="swipe-hint">Deslize para ver as ${m.options.length} opções</span>
+    <div class="ficha-head"><div class="stack" style="gap:2px"><span class="time">${fromMin(m.min)}${m.auto ? "" : " · seu horário"}</span><h2>${m.n}</h2></div><div class="row" style="gap:8px">${d.meals[m.id] != null ? '<span class="pill good">Feita</span>' : ""}<button class="iconbtn" data-a="mealedit" data-id="${m.id}" aria-label="Editar fichas e horário de ${esc(m.n)}" title="Editar fichas e horário">${IC.edit(17)}</button></div></div>
+    <div class="opts">${m.options.map((o, i) => o.hidden ? "" : optCard(m, o, i, entryOf(d, m.id))).join("")}</div>
+    <div class="ficha-foot"><span class="swipe-hint">Deslize para ver as ${m.options.filter(o => !o.hidden).length} opções</span><button class="btn sm ghost" data-a="ficha" data-id="${m.id}">Comi outra coisa</button></div>
   </section>`).join("")}
   <div class="card"><h2>Guia rápido</h2>
     <details><summary>Bons alimentos para o seu objetivo</summary><div class="stack"><div class="guide">${foodGuide(S.goal.type)}</div>
@@ -840,6 +928,11 @@ function renderPerfil() {
     <div class="card"><h2>Aparência</h2>
       <div class="seg" data-seg="theme">${[["auto", "Automático"], ["light", "Claro"], ["dark", "Escuro"]].map(([v, l]) => `<button type="button" class="${themePref() === v ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div>
       <p class="small muted">Automático segue o modo do seu aparelho.</p></div>
+    <form class="card" id="hf" autocomplete="off"><h2>Refeições e horários</h2>
+      <p class="small muted" style="margin-top:-6px">Os horários automáticos seguem sua hora de acordar e de dormir. Mude o que quiser.</p>
+      <div class="mlist">${mealPlan(T, true).map(m => `<div class="mrow"><label class="mcheck"><input type="checkbox" name="on-${m.id}" ${m.off ? "" : "checked"}><span>${esc(m.n)}</span></label><input type="time" name="t-${m.id}" value="${fromMin(m.min)}" aria-label="Horário de ${esc(m.n)}"></div>`).join("")}</div>
+      <div class="row" style="gap:8px"><button class="btn block" type="submit" style="flex:1">Salvar horários</button><button class="btn ghost" type="button" data-a="autotimes">Automáticos</button></div>
+    </form>
     <div class="card"><h2>Meta de peso</h2>
       <div class="setrow"><span>${g.type === "manter" ? "Manter o peso" : `${I.G.label} ${fmt(Math.abs(I.total), 1)} kg`}</span><span class="small muted">${g.type === "manter" ? "" : `até ${shortDate(g.endDate)}`}</span></div>
       <button class="btn ghost block" data-a="goal">Editar meta</button></div>
@@ -872,7 +965,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet()
 const QUAL = ["Péssima", "Ruim", "Ok", "Boa", "Ótima"];
 const WHY = ["Banheiro", "Calor", "Pensamentos", "Fome", "Barulho", "Sem motivo"];
 function sleepSheet(k) {
-  k = k || todayKey();
+  k = k || curDay;
   const p = effP(), ex = sleepOf(k), d = parseKey(k);
   openSheet((s, box) => {
     sheetState = ex ? clone(ex) : { bed: p.bed, wake: p.wake, q: 4, wakes: 0, head: false, why: [], screen: "nao" };
@@ -881,6 +974,7 @@ function sleepSheet(k) {
       box.innerHTML = `<div class="grab"></div>
       <div class="row between"><div><span class="eyebrow">${d.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "short" })}</span><h2>Como foi a noite?</h2></div><span class="pill sleep num" id="s-dur">${durLong(sleepDur(st))}</span></div>
       <div class="grid2"><div class="field"><label for="s-bed">Dormi às</label><input id="s-bed" type="time" value="${st.bed}"></div><div class="field"><label for="s-wake">Acordei às</label><input id="s-wake" type="time" value="${st.wake}"></div></div>
+      <div class="field"><span class="lab">Quanto tempo para pegar no sono</span><div class="seg">${[[5, "< 10 min"], [15, "10–20"], [30, "20–40"], [50, "40+"]].map(([v, l]) => `<button type="button" class="${st.lat === v ? "on" : ""}" data-lat="${v}">${l}</button>`).join("")}</div></div>
       <div class="field"><span class="lab">Qualidade</span><div class="faces">${QUAL.map((q, i) => `<button type="button" class="${st.q === i + 1 ? "on" : ""}" data-q="${i + 1}"><b>${i + 1}</b>${q}</button>`).join("")}</div></div>
       <div class="field"><span class="lab">Acordei no meio da noite</span><div class="seg">${[0, 1, 2, 3].map(n => `<button type="button" class="${Math.min(3, st.wakes) === n ? "on" : ""}" data-w="${n}">${n === 0 ? "Não" : n === 3 ? "3+" : n + "×"}</button>`).join("")}</div></div>
       ${st.wakes ? `<div class="field"><span class="lab">O que te acordou?</span><div class="chips">${WHY.map(w => `<button type="button" class="${st.why.includes(w) ? "on" : ""}" data-why="${w}">${w}</button>`).join("")}</div></div>` : ""}
@@ -892,14 +986,15 @@ function sleepSheet(k) {
     s.addEventListener("input", e => { if (e.target.id === "s-bed") sheetState.bed = e.target.value || sheetState.bed; if (e.target.id === "s-wake") sheetState.wake = e.target.value || sheetState.wake; const el = s.querySelector("#s-dur"); if (el) el.textContent = durLong(sleepDur(sheetState)); });
     s.addEventListener("click", e => {
       const b = e.target.closest("button"); if (!b || !sheetState) return; const st = sheetState;
-      if (b.dataset.q) { st.q = +b.dataset.q; draw(); }
+      if (b.dataset.lat) { st.lat = st.lat === +b.dataset.lat ? null : +b.dataset.lat; draw(); }
+      else if (b.dataset.q) { st.q = +b.dataset.q; draw(); }
       else if (b.dataset.w) { st.wakes = +b.dataset.w; if (!st.wakes) st.why = []; draw(); }
       else if (b.dataset.why) { const w = b.dataset.why; st.why = st.why.includes(w) ? st.why.filter(x => x !== w) : [...st.why, w]; draw(); }
       else if (b.dataset.screen) { st.screen = b.dataset.screen; draw(); }
       else if (b.dataset.head) { st.head = !st.head; draw(); }
       else if (b.dataset.del) { if (b.dataset.confirm) { S.sleep[k] = { del: true, u: Date.now() }; commit(); closeSheet(true); render(); toast("Registro apagado"); } else { b.dataset.confirm = "1"; b.textContent = "Toque de novo para apagar"; } }
       else if (b.dataset.save) {
-        S.sleep[k] = { bed: st.bed, wake: st.wake, q: st.q, wakes: st.wakes, head: !!st.head, why: st.why, screen: st.screen, u: Date.now() };
+        S.sleep[k] = { bed: st.bed, wake: st.wake, q: st.q, wakes: st.wakes, head: !!st.head, why: st.why, screen: st.screen, lat: st.lat != null ? st.lat : null, u: Date.now() };
         commit(); closeSheet(true); render();
         const sc = sleepScore(S.sleep[k]);
         toast(sc >= 80 ? `Noite salva · ${sc} pontos. Ótimo começo.` : sc >= 60 ? `Noite salva · ${sc} pontos.` : `Noite salva · ${sc} pontos. Hoje vale caprichar no modo noite.`);
@@ -913,10 +1008,10 @@ function fichaSheet(id) {
     const draw = () => {
       _T = null; const { plan } = ctx(), m = plan.find(x => x.id === id), en = entryOf(getDay(), id), r = resolve(m, en);
       const mine = m.options.filter(o => o.cid);
-      box.innerHTML = `<div class="grab"></div><div class="row between"><div><span class="eyebrow num">${fromMin(m.min)}</span><h2>${m.n}</h2></div>${en ? `<button class="link small" data-clear="1">Desmarcar</button>` : ""}</div>
+      box.innerHTML = `<div class="grab"></div><div class="row between"><div><span class="eyebrow num">${isToday() ? fromMin(m.min) : dayLabel(curDay)}</span><h2>${m.n}</h2></div>${en ? `<button class="link small" data-clear="1">Desmarcar</button>` : ""}</div>
       ${r ? `<div class="card flat" style="padding:14px;gap:10px"><div class="row between wrap"><b>${esc(r.t)}</b><span class="small muted num">${r.kcal} kcal · ${r.prot} g proteína</span></div>
         ${r.free ? "" : `<div class="field"><span class="lab">Quanto você comeu?</span><div class="seg">${[[0.5, "Metade"], [1, "Tudo"], [1.5, "Repeti"]].map(([q, l]) => `<button type="button" class="${r.q === q ? "on" : ""}" data-q="${q}">${l}</button>`).join("")}</div></div>`}</div>` : ""}
-      <div class="opts">${m.options.map((o, i) => optCard(m, o, i, en)).join("")}</div>
+      <div class="opts">${m.options.map((o, i) => o.hidden ? "" : optCard(m, o, i, en)).join("")}</div>
       <div class="card flat" style="padding:14px"><h3>Comi outra coisa</h3>
         <div class="field"><label for="fr-t">O que você comeu</label><input id="fr-t" placeholder="Ex.: 2 tapiocas com queijo e café" maxlength="80" value="${esc(free.t || "")}"></div>
         <div class="field"><span class="lab">Quanto</span><div class="seg">${[[0.6, "Pouco"], [1, "Normal"], [1.4, "Bastante"]].map(([q, l]) => `<button type="button" class="${free.q === q ? "on" : ""}" data-fq="${q}">${l}</button>`).join("")}</div></div>
@@ -930,7 +1025,7 @@ function fichaSheet(id) {
     draw();
     s.addEventListener("click", e => {
       const b = e.target.closest("button"); if (!b) return; e.stopPropagation(); keep();
-      const before = dayScore(todayKey());
+      const before = dayScore(curDay);
       if (b.dataset.clear) { editDay(d => { delete d.meals[id]; }); closeSheet(true); render(); }
       else if (b.dataset.a === "pick") { pickMeal(id, +b.dataset.i); closeSheet(true); render(); }
       else if (b.dataset.q) { editDay(d => { const en = entryOf(d, id); if (en) d.meals[id] = { ...en, q: +b.dataset.q }; }); draw(); }
@@ -950,17 +1045,75 @@ function fichaSheet(id) {
   });
 }
 function pickMeal(id, i) {
-  const before = dayScore(todayKey());
+  const before = dayScore(curDay);
   const { plan } = ctx(), m = plan.find(x => x.id === id), o = m && m.options[i]; if (!o) return;
   let on = false;
   editDay(d => { const en = entryOf(d, id); if (isChosen(en, o, i)) delete d.meals[id]; else { d.meals[id] = o.cid ? { c: o.cid, q: 1 } : { i, q: 1 }; on = true; } });
   _T = null;
-  if (on) { const c = ctx(), n = eatenOn(todayKey(), c.plan).n;
+  if (on) { const c = ctx(), n = eatenOn(curDay, c.plan).n;
     toast(n >= c.plan.length ? "Todas as refeições do dia. Fechou." : pickMsg(n, c.plan.length));
     afterScore(before); }
 }
+/* Editar as fichas e o horário de uma refeição */
+function mealEditSheet(id) {
+  openSheet((s, box) => {
+    const draw = () => {
+      _T = null; const { T } = ctx(), m = mealPlan(T, true).find(x => x.id === id), fi = FICHAS.find(x => x.id === id);
+      box.innerHTML = `<div class="grab"></div><div><span class="eyebrow">Personalizar</span><h2>${m.n}</h2></div>
+      <div class="grid2"><div class="field"><label for="me-time">Horário</label><input id="me-time" type="time" value="${fromMin(m.min)}"></div>
+        <div class="field"><span class="lab">&nbsp;</span>${m.auto ? `<span class="small muted" style="padding-top:12px">Automático, pelo seu horário de acordar e dormir</span>` : `<button class="btn ghost" data-autotime="1">Voltar ao automático (${fromMin(autoMin(fi))})</button>`}</div></div>
+      <div class="field"><span class="lab">Fichas desta refeição</span><div class="elist">${m.options.map((o, i) => `<div class="erow ${o.hidden ? "off" : ""}"><span class="et"><b>${esc(o.t)}</b><small class="num">${o.kcal} kcal · ${o.prot} g proteína${o.hidden ? " · escondida" : o.cid ? " · sua" : o.edited ? " · editada" : ""}</small></span>
+        <button class="btn sm ghost" data-edit="${o.cid ? "c:" + o.cid : o.key}">Editar</button>${o.cid ? "" : `<button class="btn sm ghost" data-hide="${o.key}">${o.hidden ? "Mostrar" : "Esconder"}</button>`}</div>`).join("")}</div></div>
+      <button class="btn food block" data-new="1">+ Nova ficha</button>
+      <button type="button" class="toggle" data-off="1"><span><b>Não faço esta refeição</b><br><span class="small muted">Some do plano. Dá para religar em Ajustes.</span></span><span class="sw"></span></button>`;
+    };
+    draw();
+    s.addEventListener("change", e => { if (e.target.id === "me-time" && e.target.value) { S.profile.mealTimes = { ...(S.profile.mealTimes || {}), [id]: e.target.value }; S.profile.u = Date.now(); commit(); draw(); render(); } });
+    s.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return; e.stopPropagation();
+      if (b.dataset.autotime) { const mt = { ...(S.profile.mealTimes || {}) }; delete mt[id]; S.profile.mealTimes = mt; S.profile.u = Date.now(); commit(); draw(); render(); }
+      else if (b.dataset.hide) { const k = b.dataset.hide, cur = S.fichas[k] && !S.fichas[k].del ? S.fichas[k] : {}; const { del, ...rest } = cur; S.fichas[k] = { ...rest, hidden: !cur.hidden, u: Date.now() }; commit(); draw(); render(); }
+      else if (b.dataset.edit) { fichaEditSheet(id, b.dataset.edit); }
+      else if (b.dataset.new) { fichaEditSheet(id, null); }
+      else if (b.dataset.off) { S.profile.mealOff = { ...(S.profile.mealOff || {}), [id]: true }; S.profile.u = Date.now(); commit(); closeSheet(true); render(); toast("Refeição tirada do plano. Para religar, vá em Ajustes."); }
+    });
+  });
+}
+function fichaEditSheet(mealId, ref) {
+  _T = null; const { T } = ctx(), m = mealPlan(T, true).find(x => x.id === mealId);
+  const isCustom = ref && ref.startsWith("c:"), cid = isCustom ? ref.slice(2) : null;
+  const o = ref ? m.options.find(x => (cid ? x.cid === cid : x.key === ref)) : null;
+  const cur = o || { t: "", tag: "", items: [], kcal: m.avg, prot: m.avgP };
+  openSheet((s, box) => {
+    box.innerHTML = `<div class="grab"></div><div><span class="eyebrow">${esc(m.n)}</span><h2>${ref ? "Editar ficha" : "Nova ficha"}</h2></div>
+      <div class="field"><label for="fe-t">Nome</label><input id="fe-t" maxlength="60" value="${esc(cur.t)}" placeholder="Ex.: Tapioca com frango"></div>
+      <div class="field"><label for="fe-items">Ingredientes, um por linha</label><textarea id="fe-items" rows="5" placeholder="Tapioca · 2 un&#10;Frango desfiado · 80 g&#10;Queijo · 1 fatia">${esc((cur.items || []).join("\n"))}</textarea></div>
+      <div class="grid3"><div class="field"><label for="fe-k">Calorias</label><input id="fe-k" type="number" inputmode="numeric" value="${cur.kcal || ""}"></div>
+        <div class="field"><label for="fe-p">Proteína (g)</label><input id="fe-p" type="number" inputmode="numeric" value="${cur.prot != null ? cur.prot : ""}"></div>
+        <div class="field"><label for="fe-tag">Etiqueta</label><input id="fe-tag" maxlength="18" value="${esc(cur.tag || "")}" placeholder="Opcional"></div></div>
+      <p class="small muted">Não sabe as calorias? Deixe o valor sugerido; dá para ajustar depois.</p>
+      <button class="btn food block" data-save="1">Salvar ficha</button>
+      ${ref && !isCustom && o && o.edited ? `<button class="btn ghost block" data-restore="1">Restaurar a ficha original</button>` : ""}
+      ${isCustom ? `<button class="link small" style="color:var(--danger);align-self:center" data-del="1">Apagar esta ficha</button>` : ""}`;
+    setTimeout(() => box.querySelector("#fe-t").focus(), 60);
+    s.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return; e.stopPropagation();
+      const g = q => box.querySelector(q).value.trim();
+      if (b.dataset.save) {
+        const t = g("#fe-t"); if (!t) { box.querySelector("#fe-t").focus(); return; }
+        const items = g("#fe-items").split("\n").map(x => x.trim()).filter(Boolean).slice(0, 12);
+        const rec = { t, tag: g("#fe-tag"), items, k: Math.round(num(g("#fe-k"), 1, 5000, m.avg)), p: Math.round(num(g("#fe-p"), 0, 400, m.avgP)), u: Date.now() };
+        if (isCustom) S.custom[cid] = { ...S.custom[cid], ...rec, meal: mealId };
+        else if (ref) { const prev = S.fichas[ref] && !S.fichas[ref].del ? S.fichas[ref] : {}; S.fichas[ref] = { ...prev, ...rec }; }
+        else S.custom["c" + Date.now().toString(36)] = { ...rec, meal: mealId };
+        commit(); closeSheet(true); render(); mealEditSheet(mealId); toast("Ficha salva.");
+      } else if (b.dataset.restore) { const hidden = S.fichas[ref] && S.fichas[ref].hidden; S.fichas[ref] = hidden ? { hidden: true, u: Date.now() } : { del: true, u: Date.now() }; commit(); closeSheet(true); render(); mealEditSheet(mealId); toast("Ficha original de volta."); }
+      else if (b.dataset.del) { if (b.dataset.confirm) { S.custom[cid] = { del: true, u: Date.now() }; commit(); closeSheet(true); render(); mealEditSheet(mealId); toast("Ficha apagada."); } else { b.dataset.confirm = "1"; b.textContent = "Toque de novo para apagar"; } }
+    });
+  });
+}
 function pickMsg(n, t) { const a = [`${n} de ${t} refeições feitas`, `Boa. Faltam ${t - n} para fechar o dia`, `Registrado. ${n} de ${t}`]; return a[(n + new Date().getDate()) % a.length]; }
-function afterScore(before) { _T = null; const now = dayScore(todayKey()); if (before < 85 && now >= 85) setTimeout(() => { toast("Dia redondo: 85 pontos ou mais."); celebrate(); }, 500); }
+function afterScore(before) { _T = null; const now = dayScore(curDay); if (before < 85 && now >= 85) setTimeout(() => { toast("Dia redondo: 85 pontos ou mais."); celebrate(); }, 500); }
 
 function weightSheet() {
   openSheet((s, box) => {
@@ -1069,6 +1222,14 @@ document.addEventListener("click", e => {
   else if (a === "water") { editDay(d => { d.water = Math.max(0, (d.water || 0) + +b.dataset.d); }); render(); afterScore(before); }
   else if (a === "gut") { editDay(d => { d.gut = Math.max(0, (d.gut || 0) + +b.dataset.d); }); render(); }
   else if (a === "habit") { editDay(d => { d.habits[b.dataset.id] = !d.habits[b.dataset.id]; }); render(); afterScore(before); }
+  else if (a === "day") {
+    const dd = +b.dataset.d, t = todayKey();
+    if (dd === 0) { curDay = t; dayPinned = false; }
+    else { const nk = keyOf(addDays(parseKey(curDay), dd)); if (nk > t || daysBetween(nk, t) > 90) return; curDay = nk; dayPinned = nk !== t; }
+    render();
+  }
+  else if (a === "mealedit") mealEditSheet(b.dataset.id);
+  else if (a === "autotimes") { S.profile.mealTimes = {}; S.profile.u = Date.now(); commit(); render(); toast("Horários automáticos de volta."); }
   else if (a === "shop-toggle") { const x = S.shop[b.dataset.id]; if (x) { x.done = x.done ? 0 : 1; x.u = Date.now(); commit(); render(); } }
   else if (a === "shop-del") { S.shop[b.dataset.id] = { del: true, u: Date.now() }; commit(); render(); }
   else if (a === "shop-clear") { for (const k in S.shop) if (S.shop[k].done && !S.shop[k].del) S.shop[k] = { del: true, u: Date.now() }; commit(); render(); toast("Comprados removidos da lista."); }
@@ -1083,6 +1244,12 @@ document.addEventListener("input", e => { const onb = e.target.closest("#onb"); 
 document.addEventListener("submit", async e => {
   e.preventDefault(); const f = e.target;
   if (f.id === "shopf") { const added = shopAdd(f.item.value); if (added) commit(); render(); const inp = $("#shop-in"); if (inp) inp.focus(); if (!added && f.item.value.trim()) toast("Esse item já está na lista."); return; }
+  if (f.id === "hf") {
+    const mt = {}, off = {};
+    for (const fi of FICHAS) { const on = f.querySelector(`[name="on-${fi.id}"]`).checked, tv = f.querySelector(`[name="t-${fi.id}"]`).value;
+      if (!on) off[fi.id] = true; if (tv && tv !== fromMin(autoMin(fi))) mt[fi.id] = tv; }
+    S.profile.mealTimes = mt; S.profile.mealOff = off; S.profile.u = Date.now(); commit(); render(); toast("Refeições e horários salvos."); return;
+  }
   if (f.id === "pf") { const { p, w } = readProfile(f); const changed = w !== currentWeight(); S.profile = { ...p, u: Date.now() }; if (changed || !weightList().length) setWeight(w); commit(); render(); toast("Salvo. Plano e rotina atualizados."); }
   else if (f.id === "onb") { const { p, w } = readProfile(f); S.profile = { ...p, setup: true, u: Date.now() }; setWeight(w); S.goal = readGoal(f, w); commit(); view = "app"; location.hash = "hoje"; tab = "hoje"; render(); window.scrollTo(0, 0); toast("Plano montado. Comece registrando a noite."); }
   else if (f.id === "auth") {
@@ -1101,6 +1268,7 @@ async function signOut() { try { clearTimeout(pushTimer); await syncNow(); if (c
 /* ================= render ================= */
 function render() {
   _T = null;
+  if (!dayPinned || curDay > todayKey()) { curDay = todayKey(); dayPinned = false; }
   const app = $("#app"), bar = $("#tabbar");
   if (HAS_CLOUD && !uid && view !== "app" && !flag("vigor.skipAuth")) view = "gate";
   if (view === "gate" && (!HAS_CLOUD || uid)) view = "app";
@@ -1108,7 +1276,7 @@ function render() {
   if (!S.profile.setup) { bar.hidden = true; app.innerHTML = renderOnb(); goalPreview(app, currentWeight()); return; }
   bar.hidden = false;
   const P = progress(); checkBadges(P, !rendered); rendered = true;
-  app.innerHTML = tab === "sono" ? renderSono() : tab === "comida" ? renderComida() : tab === "meta" ? renderMeta() : tab === "perfil" ? renderPerfil() : renderHoje();
+  app.innerHTML = tab === "sono" ? renderSono() : tab === "comida" ? renderComida() : tab === "compras" ? `${header("Lista de compras", "O que falta comprar")}${renderCompras()}` : tab === "meta" ? renderMeta() : tab === "perfil" ? renderPerfil() : renderHoje();
   renderTabs(); renderSync();
   if (scrollTo) { const el = document.getElementById(scrollTo); scrollTo = null; if (el) el.scrollIntoView({ block: "start" }); }
 }
