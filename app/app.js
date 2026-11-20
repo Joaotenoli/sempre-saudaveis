@@ -424,6 +424,7 @@ const BADGES = [
   { id: "seq30", n: "30 em sequência", ic: "flame", d: "30 dias seguidos", ok: c => c.streak >= 30 },
   { id: "nivel5", n: "Nível 5", ic: "star", d: "Chegou ao nível Forte", ok: c => c.lvl >= 4 },
   { id: "top", n: "Dia 90+", ic: "trophy", d: "Um dia com 90 pontos ou mais", ok: c => c.best >= 90 },
+  { id: "mes", n: "Mês forte", ic: "trophy", d: "1.500 XP num mesmo mês", ok: c => c.monthXp >= 1500 },
   { id: "treino12", n: "12 treinos", ic: "dumb", d: "12 treinos marcados", ok: c => c.trains >= 12 }
 ];
 function badgeCtx(P) {
@@ -438,13 +439,33 @@ function badgeCtx(P) {
     trains: dayKeys.filter(k => S.days[k].habits && S.days[k].habits.treino).length,
     weights: weightList().length, towards: S.goal.type === "manter" ? 0 : (I.cur - S.goal.start) * dir,
     goalPct: S.goal.type === "manter" ? 0 : I.pct, reached: I.reached, streak: P.streak, lvl: P.lvl,
-    best: Math.max(0, ...Object.values(P.scores))
+    best: Math.max(0, ...Object.values(P.scores)),
+    monthXp: (() => { const n = new Date(), pre = `${n.getFullYear()}-${pad(n.getMonth() + 1)}-`; let x = 0; for (const k in P.scores) if (k.startsWith(pre)) x += P.scores[k]; return x; })()
   };
 }
+const STREAK_MARKS = [3, 7, 14, 21, 30, 50, 75, 100, 150, 200, 365];
 function checkBadges(P, silent) {
-  const c = badgeCtx(P); const fresh = [];
-  for (const b of BADGES) if (!S.badges[b.id] && b.ok(c)) { S.badges[b.id] = todayKey(); fresh.push(b); }
-  if (fresh.length) { lsWrite(); schedulePush(); if (!silent) { toast(`Conquista: ${fresh[0].n}`); celebrate(); } }
+  const c = badgeCtx(P); const shows = [], n0 = Object.keys(S.badges).length;
+  for (const b of BADGES) if (!S.badges[b.id] && b.ok(c)) { S.badges[b.id] = todayKey(); shows.push({ big: b.n, sub: "CONQUISTA DESBLOQUEADA", msg: `${b.d}. Que orgulho!`, icon: b.ic }); }
+  for (const n of STREAK_MARKS) if (P.streak >= n && !S.badges["~s" + n]) { S.badges["~s" + n] = todayKey(); if (P.streak === n) shows.push({ big: String(n), sub: "DIAS SEGUIDOS", msg: n >= 30 ? "Isso já virou hábito. Muito orgulho de você!" : n >= 7 ? "Uma semana inteira! Continue assim." : "Começou a sequência. Amanhã tem mais!" }); }
+  for (let l = 1; l <= P.lvl; l++) if (!S.badges["~l" + l]) { S.badges["~l" + l] = todayKey(); if (l === P.lvl) shows.push({ big: "Nível " + (l + 1), sub: LEVELS[l][1].toUpperCase(), msg: "Você subiu de nível! Seu mascote ficou mais forte." }); }
+  if (!S.badges["~p" + todayKey()] && (P.scores[todayKey()] || 0) >= 85) { S.badges["~p" + todayKey()] = 1; shows.push({ big: String(P.scores[todayKey()]), sub: "XP HOJE · DIA REDONDO", msg: "Dia completo! Sono, comida e hábitos em dia." }); }
+  if (Object.keys(S.badges).length !== n0) { lsWrite(); schedulePush(); }
+  if (!silent) shows.slice(0, 2).forEach(x => party(x));
+}
+if (/^(127\.0\.0\.1|localhost)$/.test(location.hostname)) window.__ssParty = party; // só para testes locais
+const realBadges = () => BADGES.filter(b => S.badges[b.id]).length;
+let partyQ = [];
+function party(x) { partyQ.push(x); if (partyQ.length === 1) showParty(); }
+function showParty() {
+  const x = partyQ[0]; if (!x) return;
+  const el = document.createElement("div"); el.className = "party"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true");
+  el.innerHTML = `<div class="party-in"><div class="bubble">${esc(x.msg)}</div>
+    <div class="party-star"><svg viewBox="0 0 200 190" aria-hidden="true"><path d="M100 8l26 56 61 7-45 42 12 60-54-30-54 30 12-60L13 71l61-7z" fill="#FFC93C" stroke="#FFE8A3" stroke-width="10" stroke-linejoin="round"/></svg><span class="sp s1">✦</span><span class="sp s2">✦</span><span class="sp s3">✦</span>${mascot("wow", 150, null, true)}</div>
+    <div class="party-big num">${esc(x.big)}</div><div class="party-sub">${esc(x.sub)}</div>
+    <button class="party-btn" data-party="ok">Bora!</button></div>`;
+  document.body.appendChild(el); celebrate();
+  el.querySelector("[data-party]").addEventListener("click", () => { el.remove(); partyQ.shift(); if (partyQ.length) setTimeout(showParty, 250); });
 }
 
 /* ================= insights ================= */
@@ -569,7 +590,68 @@ const dec_ = v => String(+(+v).toFixed(1)).replace(".", ",");
 let _mid = 0;
 const STAGES = ["Semente", "Broto", "Muda", "Florzinha"];
 const stageOf = lvl => Math.min(3, Math.floor((lvl + 1) / 2));
+/* Rosto compartilhado pelos mascotes */
+function face(mood, y, ink, gap) {
+  gap = gap || 14; const L = 60 - gap, Rr = 60 + gap;
+  const eyes = mood === "sleep" ? `<path d="M${L - 8} ${y}q8 6 16 0M${Rr - 8} ${y}q8 6 16 0" stroke="${ink}" stroke-width="4" fill="none" stroke-linecap="round"/>`
+    : mood === "wow" ? `<circle cx="${L}" cy="${y}" r="8" fill="${ink}"/><circle cx="${Rr}" cy="${y}" r="8" fill="${ink}"/><circle cx="${L + 3}" cy="${y - 3}" r="2.800" fill="#fff"/><circle cx="${Rr + 3}" cy="${y - 3}" r="2.800" fill="#fff"/>`
+    : mood === "calm" ? `<circle cx="${L}" cy="${y + 2}" r="4.800" fill="${ink}"/><circle cx="${Rr}" cy="${y + 2}" r="4.800" fill="${ink}"/><circle cx="${L + 1.500}" cy="${y + 0.500}" r="1.500" fill="#fff"/><circle cx="${Rr + 1.500}" cy="${y + 0.500}" r="1.500" fill="#fff"/>`
+    : `<path d="M${L - 8} ${y + 3}q8-10 16 0M${Rr - 8} ${y + 3}q8-10 16 0" stroke="${ink}" stroke-width="4.500" fill="none" stroke-linecap="round"/>`;
+  const my = y + 15;
+  const mouth = mood === "sleep" ? `<ellipse cx="60" cy="${my + 2}" rx="3.500" ry="2.500" fill="${ink}"/>`
+    : mood === "wow" || mood === "happy" ? `<path d="M50 ${my}q10 14 20 0z" fill="${ink}"/><path d="M54 ${my + 6}q6 4 12 0" fill="#FF7E86"/>`
+    : `<path d="M54 ${my + 2}q6 5 12 0" stroke="${ink}" stroke-width="3.500" fill="none" stroke-linecap="round"/>`;
+  const zz = mood === "sleep" ? `<text x="94" y="40" font-size="15" font-weight="700" fill="${ink}" opacity=".45" style="font-family:var(--f-display)">z</text><text x="104" y="28" font-size="11" font-weight="700" fill="${ink}" opacity=".3">z</text>` : "";
+  const spark = mood === "wow" ? `<path d="M101 34l2.500 6 6 2.500-6 2.500-2.500 6-2.500-6-6-2.500 6-2.500z" fill="#FFC93C"/>` : "";
+  return eyes + mouth + zz + spark;
+}
+const crown = st => st >= 3 ? `<path d="M46 26l5 9 9-11 9 11 5-9 2 16H44z" fill="#FFC93C"/><circle cx="60" cy="22" r="2.500" fill="#FF8FB0"/>` : "";
+const blush = (y, gap) => `<ellipse cx="${60 - gap - 10}" cy="${y}" rx="7" ry="4.500" fill="#FF9AA8" opacity=".7"/><ellipse cx="${60 + gap + 10}" cy="${y}" rx="7" ry="4.500" fill="#FF9AA8" opacity=".7"/>`;
+const PETS = {
+  broto: { n: "Broto", d: "um brotinho que cresce com você" },
+  chama: { n: "Chama", d: "um foguinho que não deixa a sequência apagar" },
+  urso: { n: "Polar", d: "um ursinho calmo de cachecol" },
+  pinguim: { n: "Pingo", d: "um pinguim que adora uma soneca" },
+  dino: { n: "Dino", d: "um dinossaurinho cheio de energia" }
+};
+const PET_IDS = Object.keys(PETS);
+const petId = () => PETS[S.profile.pet] ? S.profile.pet : "broto";
+function petSVG(id, mood, st) {
+  const ink = "#1E2A14", up = mood === "wow" || mood === "happy";
+  if (id === "chama") return `<ellipse cx="60" cy="114" rx="30" ry="4" fill="#000" opacity=".1"/>
+    <rect x="42" y="100" width="12" height="13" rx="6" fill="#F06A2A"/><rect x="66" y="100" width="12" height="13" rx="6" fill="#F06A2A"/>
+    <path d="${up ? "M24 76q-10-6-10-18M96 76q10-6 10-18" : "M24 82q-8 6-8 14M96 82q8 6 8 14"}" stroke="#FF7A33" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <path d="M60 10c6 12 16 14 22 26 4-6 4-12 2-18 14 12 22 30 22 48 0 30-20 44-46 44S14 96 14 66c0-16 8-28 18-36 0 8 4 14 10 16-2-16 6-28 18-36z" fill="#FF8A3D"/>
+    <path d="M60 46c14 8 26 22 26 38 0 18-12 24-26 24s-26-6-26-24c0-12 8-20 14-26 2 8 6 10 10 10-2-8 0-16 2-22z" fill="#FFB25C"/>
+    ${crown(st)}${blush(80, 14)}${face(mood, 66, ink)}`;
+  if (id === "urso") return `<ellipse cx="60" cy="114" rx="32" ry="4" fill="#000" opacity=".1"/>
+    <circle cx="30" cy="34" r="12" fill="#F4EFE6"/><circle cx="90" cy="34" r="12" fill="#F4EFE6"/><circle cx="30" cy="34" r="6" fill="#FFC9D2"/><circle cx="90" cy="34" r="6" fill="#FFC9D2"/>
+    <path d="${up ? "M20 80q-12-4-12-16M100 80q12-4 12-16" : "M20 86q-8 6-8 14M100 86q8 6 8 14"}" stroke="#EDE6DA" stroke-width="11" fill="none" stroke-linecap="round"/>
+    <path d="M60 24c26 0 44 20 44 46 0 26-14 42-44 42S16 96 16 70c0-26 18-46 44-46z" fill="#FFFDF8" stroke="#E8E1D4" stroke-width="2"/>
+    <path d="M30 92l30 14 30-14-6 8-24 10-24-10z" fill="#C4F26A"/><path d="M34 90q26 16 52 0l-4 8q-22 12-44 0z" fill="#A8DE48"/>
+    <ellipse cx="60" cy="74" rx="6" ry="4.500" fill="#3A2614"/>
+    ${crown(st)}${blush(78, 16)}${face(mood, 62, ink, 18).replace(/<path d="M50 [^"]*z" fill="[^"]*"\/><path d="M54 [^"]*" fill="#FF7E86"\/>/, `<path d="M52 82q8 10 16 0z" fill="${ink}"/>`)}`;
+  if (id === "pinguim") return `<ellipse cx="60" cy="114" rx="30" ry="4" fill="#000" opacity=".1"/>
+    <ellipse cx="46" cy="110" rx="9" ry="5" fill="#FFA24C"/><ellipse cx="74" cy="110" rx="9" ry="5" fill="#FFA24C"/>
+    <path d="${up ? "M22 66q-14-4-14-18M98 66q14-4 14-18" : "M22 70q-10 14-6 26M98 70q10 14 6 26"}" stroke="#A48BEA" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <path d="M60 18c26 0 40 24 40 52 0 28-14 40-40 40S20 98 20 70c0-28 14-52 40-52z" fill="#BBA6F4"/>
+    <path d="M60 48c16 0 26 14 26 30 0 18-10 28-26 28S34 96 34 78c0-16 10-30 26-30z" fill="#F4F0FF"/>
+    <path d="M55 74h10l-5 7z" fill="#FFA24C"/>
+    ${crown(st)}${blush(72, 14)}${face(mood, 60, ink).replace(/<path d="M50 [^"]*z" fill="[^"]*"\/><path d="M54 [^"]*" fill="#FF7E86"\/>|<path d="M54 [^"]*" stroke="[^"]*" stroke-width="3.500" fill="none" stroke-linecap="round"\/>|<ellipse cx="60" cy="77"[^>]*\/>/, "")}`;
+  if (id === "dino") return `<ellipse cx="60" cy="114" rx="34" ry="4" fill="#000" opacity=".1"/>
+    <path d="M96 96q18 4 20-10-6 4-14 2z" fill="#FFC21A"/>
+    <rect x="40" y="100" width="12" height="13" rx="6" fill="#F2B200"/><rect x="68" y="100" width="12" height="13" rx="6" fill="#F2B200"/>
+    <path d="M42 26l6-12 6 12M56 22l6-13 6 13M70 26l6-12 6 12" fill="#FF8A3D"/>
+    <path d="${up ? "M22 78q-12-4-12-16M98 78q12-4 12-16" : "M22 84q-8 6-8 14M98 84q8 6 8 14"}" stroke="#F7B800" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M60 22c26 0 42 20 42 46 0 28-14 42-42 42S18 96 18 68c0-26 16-46 42-46z" fill="#FFD43D"/>
+    <path d="M60 70c14 0 24 8 24 20 0 12-10 18-24 18s-24-6-24-18c0-12 10-20 24-20z" fill="#FFF1B5"/>
+    ${crown(st)}${blush(76, 16)}${face(mood, 60, ink, 16)}`;
+  return null;
+}
 function mascot(mood, size, body, live, stage) {
+  const pid = petId();
+  if (pid !== "broto") { stage = stage == null ? stageOf(progressCache ? progressCache.lvl : 0) : stage;
+    return `<svg class="mascot ${live ? "live" : ""}" width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true">${petSVG(pid, mood, stage)}</svg>`; }
   const ink = "#1E3A16", g1 = body || "#A6E05F", g2 = "#C4EE8C", g3 = "#7FC646";
   stage = stage == null ? stageOf(progressCache ? progressCache.lvl : 0) : stage;
   const eyes = mood === "sleep" ? `<path d="M38 72q8 6 16 0M66 72q8 6 16 0" stroke="${ink}" stroke-width="4" fill="none" stroke-linecap="round"/>`
@@ -777,8 +859,8 @@ function renderHoje() {
       <div class="pp-top">${avatar("avatar xl")}<b class="pp-name">${esc(p.name || "Você")}</b><span class="pill">Nível ${P.lvl + 1} · ${P.name}</span></div>
       <div class="pp-stats">
         <a href="#meta"><span class="ic sleep">${IC.flame(18)}</span><b class="num">${P.streak}</b><small>dias seguidos</small></a>
-        <a href="#meta"><span class="ic amber">${IC.star(18)}</span><b class="num">${fmt(P.xp)}</b><small>pontos</small></a>
-        <a href="#meta"><span class="ic food">${IC.trophy(18)}</span><b class="num">${Object.keys(S.badges).length}</b><small>conquistas</small></a>
+        <a href="#meta"><span class="ic amber">${IC.star(18)}</span><b class="num">${fmt(P.xp)}</b><small>XP total</small></a>
+        <a href="#meta"><span class="ic food">${IC.trophy(18)}</span><b class="num">${realBadges()}</b><small>conquistas</small></a>
       </div>
     </div>
     ${today ? `<div class="card tipcard"><span class="tipic">${IC.spark()}</span><div><b>Dica do dia</b><p>${esc(insight)}</p></div></div>` : ""}
@@ -998,6 +1080,18 @@ function weightChart(I) {
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Peso registrado e rota da meta">${s}</svg></div>
     <div class="legend"><span><i style="background:var(--food)"></i>seu peso</span>${g.type !== "manter" ? '<span><i style="background:var(--amber)"></i>rota da meta</span>' : ""}</div>`;
 }
+/* Desafio do mês: XP somado no mês corrente */
+function monthChallenge(P) {
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth(), last = new Date(y, m + 1, 0).getDate();
+  const pre = `${y}-${pad(m + 1)}-`; let xp = 0; for (const k in P.scores) if (k.startsWith(pre)) xp += P.scores[k];
+  const goal = 1500, left = last - now.getDate(), done = xp >= goal;
+  const mes = now.toLocaleDateString("pt-BR", { month: "long" });
+  return `<section class="card challenge">
+    <div class="ch-top"><div><span class="ch-tag">${mes.toUpperCase()}</span><h2>Desafio do mês</h2><p>Junte ${fmt(goal)} XP em ${mes} e ganhe a conquista Mês forte.</p></div>${mascot("wow", 84, null, false)}</div>
+    <div class="ch-bar"><span style="width:${Math.min(100, Math.max(3, xp / goal * 100))}%"></span><i class="num">${fmt(Math.min(xp, goal))}/${fmt(goal)}</i></div>
+    <div class="mline" style="margin:0"><b class="${done ? "good-t" : ""}">${done ? "Desafio completo!" : `Faltam ${fmt(goal - xp)} XP`}</b><span class="small muted">${left} ${left === 1 ? "dia restante" : "dias restantes"}</span></div>
+  </section>`;
+}
 function petCard(P, week) {
   const { T, plan } = ctx(), k = todayKey(), d = getDay(k), eat = eatenOn(k, plan), H = habitList();
   const st = stageOf(P.lvl), nextSt = st < 3 ? STAGES[st + 1] : null;
@@ -1009,14 +1103,15 @@ function petCard(P, week) {
   ];
   return `<section class="pet">
     <div class="pet-top"><div><span class="eyebrow">Sequência</span><div class="pet-streak num">${P.streak}<small> ${P.streak === 1 ? "dia" : "dias"}</small></div></div><span class="pill">Nível ${P.lvl + 1} · ${P.name}</span></div>
-    <div class="pet-hero">${mascot(moodNow(P.scores[k] || 0), 150, null, true, st)}</div>
-    <div class="pet-name">${STAGES[st]}</div>
+    <div class="pet-hero"><button class="pet-arrow" data-a="pet" data-d="-1" aria-label="Mascote anterior">‹</button>${mascot(moodNow(P.scores[k] || 0), 150, null, true, st)}<button class="pet-arrow" data-a="pet" data-d="1" aria-label="Próximo mascote">›</button></div>
+    <div class="pet-name">${PETS[petId()].n} <small>· ${STAGES[st]}</small></div>
     <div class="pet-bar"><span style="width:${Math.max(4, P.pct * 100)}%"></span></div>
-    <p class="pet-sub">${nextSt ? `Faltam <b class="num">${fmt(toNext)} pontos</b> para virar ${nextSt.toLowerCase()}` : `Forma máxima. Continue cuidando dele.`}</p>
+    <p class="pet-sub">${nextSt ? `Faltam <b class="num">${fmt(toNext)} XP</b> para a forma ${nextSt.toLowerCase()}` : `Forma máxima. Continue cuidando dele.`}</p>
     <div class="week">${week.map(w => { const dd = parseKey(w.k), l = w.s >= 80 ? "l3" : w.s >= 50 ? "l2" : w.s > 0 ? "l1" : "";
       return `<div class="wd ${w.k === k ? "today" : ""}"><span>${WD[dd.getDay()][0].toUpperCase()}</span><div class="sq ${l}">${w.s >= 50 ? IC.check(13) : w.s || ""}</div></div>`; }).join("")}</div>
-    <div class="pet-tasks"><b>Faça seu Broto crescer hoje</b>${tasks.map(([t, ok, pts]) => `<div class="ptask ${ok ? "on" : ""}"><span class="pc">${ok ? IC.check(13) : ""}</span><span>${t}</span><small>+${pts}</small></div>`).join("")}</div>
-  </section>`;
+    <div class="pet-tasks"><b>Faça ${petId() === "chama" ? "a" : "o"} ${PETS[petId()].n} crescer hoje</b>${tasks.map(([t, ok, pts]) => `<div class="ptask ${ok ? "on" : ""}"><span class="pc">${ok ? IC.check(13) : ""}</span><span>${t}</span><small>+${pts} XP</small></div>`).join("")}</div>
+  </section>
+  ${monthChallenge(P)}`;
 }
 function renderMeta() {
   const { T } = ctx(), I = goalInfo(), g = S.goal, P = progress();
@@ -1100,6 +1195,8 @@ function renderPerfil() {
   <div class="cols">
    <div class="col">
     <div class="card"><h2>Conta</h2>${acct}</div>
+    <div class="card"><h2>Seu mascote</h2><div class="petpick">${PET_IDS.map(id => { const cur = S.profile.pet; S.profile.pet = id; const svg = mascot("happy", 64, null, false); S.profile.pet = cur; return `<button class="pp ${petId() === id ? "on" : ""}" data-a="setpet" data-id="${id}" aria-pressed="${petId() === id}">${svg}<span>${PETS[id].n}</span></button>`; }).join("")}</div>
+      <p class="small muted">Ele aparece na tela inicial, comemora suas conquistas e cresce com seu nível.</p></div>
     <div class="card"><h2>Aparência</h2>
       <div class="seg" data-seg="theme">${[["auto", "Automático"], ["light", "Claro"], ["dark", "Escuro"]].map(([v, l]) => `<button type="button" class="${themePref() === v ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div>
       <p class="small muted">Automático segue o modo do seu aparelho.</p></div>
@@ -1169,10 +1266,11 @@ function sleepSheet(k) {
       else if (b.dataset.head) { st.head = !st.head; draw(); }
       else if (b.dataset.del) { if (b.dataset.confirm) { S.sleep[k] = { del: true, u: Date.now() }; commit(); closeSheet(true); render(); toast("Registro apagado"); } else { b.dataset.confirm = "1"; b.textContent = "Toque de novo para apagar"; } }
       else if (b.dataset.save) {
+        const before = dayScore(k);
         S.sleep[k] = { bed: st.bed, wake: st.wake, q: st.q, wakes: st.wakes, head: !!st.head, why: st.why, screen: st.screen, lat: st.lat != null ? st.lat : null, u: Date.now() };
-        commit(); closeSheet(true); render();
-        const sc = sleepScore(S.sleep[k]);
-        toast(sc >= 80 ? `Noite salva · ${sc} pontos. Ótimo começo.` : sc >= 60 ? `Noite salva · ${sc} pontos.` : `Noite salva · ${sc} pontos. Hoje vale caprichar no modo noite.`);
+        commit(); closeSheet(true); render(); _T = null;
+        const sc = sleepScore(S.sleep[k]), gain = dayScore(k) - before; if (gain > 0) xpPop(gain);
+        toast(sc >= 80 ? `Noite salva · nota ${sc}. Ótimo começo.` : sc >= 60 ? `Noite salva · nota ${sc}.` : `Noite salva · nota ${sc}. Hoje vale caprichar no modo noite.`);
       }
     });
   });
@@ -1289,7 +1387,11 @@ function fichaEditSheet(mealId, ref) {
   });
 }
 function pickMsg(n, t) { const a = [`${n} de ${t} refeições feitas`, `Boa. Faltam ${t - n} para fechar o dia`, `Registrado. ${n} de ${t}`]; return a[(n + new Date().getDate()) % a.length]; }
-function afterScore(before) { _T = null; const now = dayScore(curDay); if (before < 85 && now >= 85) setTimeout(() => { toast("Dia redondo: 85 pontos ou mais."); celebrate(); }, 500); }
+function afterScore(before) { _T = null; const now = dayScore(curDay); if (now > before) xpPop(now - before); }
+function xpPop(n) {
+  const el = document.createElement("div"); el.className = "xppop"; el.textContent = `+${n} XP`;
+  document.body.appendChild(el); setTimeout(() => el.remove(), 1400);
+}
 
 function weightSheet() {
   openSheet((s, box) => {
@@ -1433,6 +1535,8 @@ document.addEventListener("click", e => {
   }
   else if (a === "mealedit") mealEditSheet(b.dataset.id);
   else if (a === "cal") calSheet();
+  else if (a === "pet") { const i = PET_IDS.indexOf(petId()), n = PET_IDS[(i + +b.dataset.d + PET_IDS.length) % PET_IDS.length]; S.profile.pet = n; S.profile.u = Date.now(); commit(); render(); toast(`Agora seu mascote é ${PETS[n].n}, ${PETS[n].d}.`); }
+  else if (a === "setpet") { S.profile.pet = b.dataset.id; S.profile.u = Date.now(); commit(); render(); }
   else if (a === "pickday") { if (b.dataset.k <= todayKey()) { curDay = b.dataset.k; dayPinned = curDay !== todayKey(); render(); } }
   else if (a === "quick") quickSheet();
   else if (a === "photo-rm") { delete S.profile.photo; S.profile.u = Date.now(); commit(); render(); toast("Foto removida."); }

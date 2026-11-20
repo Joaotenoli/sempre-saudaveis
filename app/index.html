@@ -846,6 +846,45 @@ h2{font-weight:650;letter-spacing:-.02em}
 .seg button.on{background:var(--fg);color:var(--bg);box-shadow:none}
 .seg button:not(.on){color:var(--muted)}
 .themeseg button.on{background:var(--surface)}
+
+/* ===== v8: mascotes, comemorações, XP ===== */
+.pet-hero{display:flex;align-items:center;justify-content:center;gap:10px}
+.pet-arrow{width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.6);color:#5A3A22;font-size:24px;line-height:1;display:grid;place-items:center;padding:0 0 3px}
+.pet-arrow:hover{background:#fff}
+.pet-name small{font-family:var(--f-body);font-size:14px;font-weight:500;color:#8A5A3A}
+.petpick{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.pp{display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:8px 2px 10px;font-size:12.5px;font-weight:600;color:var(--fg);min-width:0}
+.pp:hover{background:var(--surface2)}
+.pp.on{border-color:var(--lime2);background:color-mix(in oklab,var(--lime) 25%,var(--surface));box-shadow:0 0 0 2px var(--lime)}
+.pp svg{width:100%;max-width:64px;height:auto}
+@media (max-width:420px){.petpick{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.challenge{background:linear-gradient(135deg,#EFFAD8,#DDF5AE);border-color:transparent;color:#14240F}
+.challenge .ch-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.challenge h2{margin-top:6px}
+.challenge p{font-size:14px;opacity:.8;margin-top:4px;max-width:34ch}
+.ch-tag{display:inline-block;background:#fff;color:#2E7D3A;font-weight:700;font-size:12px;letter-spacing:.08em;padding:4px 10px;border-radius:10px}
+.ch-bar{position:relative;height:22px;border-radius:22px;background:rgba(255,255,255,.75);overflow:hidden}
+.ch-bar span{display:block;height:100%;border-radius:22px;background:linear-gradient(90deg,#58C23A,#7FD84E)}
+.ch-bar i{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-style:normal;font-size:12px;font-weight:700;color:#1E3A16}
+.challenge .muted{color:#3E5A30!important}
+.xppop{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:80;background:#FFC93C;color:#3A2400;font-family:var(--f-display);font-weight:700;font-size:22px;padding:10px 18px;border-radius:18px;box-shadow:0 10px 30px rgba(180,120,0,.3);animation:xp 1.4s ease forwards;pointer-events:none}
+@keyframes xp{0%{opacity:0;transform:translate(-50%,10px) scale(.8)}15%{opacity:1;transform:translate(-50%,0) scale(1.08)}30%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-30px)}}
+.party{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:24px max(20px,env(safe-area-inset-left,0px)) calc(24px + env(safe-area-inset-bottom,0px));color:#fff;
+  background:repeating-conic-gradient(from 0deg at 50% 46%,#FF9C55 0 10deg,#FFA866 10deg 20deg);animation:fade .25s ease}
+.party-in{width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.bubble{position:relative;background:#fff;color:#2A1B10;border-radius:20px;padding:16px 20px;font-size:17px;font-weight:600;line-height:1.35;align-self:stretch;text-align:left;box-shadow:0 10px 30px rgba(120,50,0,.15);animation:up .35s cubic-bezier(.2,.8,.2,1)}
+.bubble::after{content:"";position:absolute;left:34px;bottom:-12px;border:12px solid transparent;border-top-color:#fff;border-bottom:0}
+.party-star{position:relative;width:260px;height:250px;display:grid;place-items:center;margin-top:8px}
+.party-star > svg{position:absolute;inset:0;width:100%;height:100%;animation:spinin .6s cubic-bezier(.2,.8,.2,1)}
+.party-star .mascot{position:relative;margin-top:24px;filter:drop-shadow(0 10px 14px rgba(120,50,0,.25))}
+.sp{position:absolute;color:#fff;font-size:22px;animation:tw 1.6s ease-in-out infinite}
+.sp.s1{left:22px;top:46px}.sp.s2{right:20px;top:30px;font-size:30px;animation-delay:.4s}.sp.s3{right:40px;bottom:40px;animation-delay:.8s}
+@keyframes tw{50%{opacity:.3;transform:scale(.7)}}
+@keyframes spinin{from{transform:scale(.4) rotate(-40deg);opacity:0}to{transform:none;opacity:1}}
+.party-big{font-family:var(--f-display);font-size:64px;font-weight:800;line-height:1;letter-spacing:-.03em;text-shadow:0 3px 0 rgba(160,60,0,.2)}
+.party-sub{font-family:var(--f-display);font-size:18px;font-weight:700;letter-spacing:.06em}
+.party-btn{margin-top:18px;width:100%;border:0;border-radius:18px;background:#fff;color:#E3681C;font-family:var(--f-display);font-size:19px;font-weight:700;padding:16px;box-shadow:0 4px 0 rgba(160,60,0,.25);cursor:pointer}
+.party-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(160,60,0,.25)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
