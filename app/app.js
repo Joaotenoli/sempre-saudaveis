@@ -506,7 +506,8 @@ const IC = {
   spark: () => '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.200 6.600L21 11l-6.800 2.400L12 20l-2.200-6.600L3 11l6.800-2.400z"/></svg>',
   cart: s => svg('<path d="M3 4h2l2.400 11.200a1 1 0 0 0 1 .800h9.200a1 1 0 0 0 1-.800L21 8H6.200"/><circle cx="9.500" cy="20" r="1.300"/><circle cx="17" cy="20" r="1.300"/>', s),
   edit: s => svg('<path d="M4 20h4L19 9a2.800 2.800 0 0 0-4-4L4 16z"/><path d="M13.500 6.500l4 4"/>', s),
-  gear: s => svg('<circle cx="12" cy="12" r="3"/><path d="M19.400 13a7.500 7.500 0 0 0 0-2l2-1.500-2-3.400-2.300 1a7.500 7.500 0 0 0-1.700-1L15 3.500h-4l-.400 2.600a7.500 7.500 0 0 0-1.700 1l-2.300-1-2 3.400L6.600 11a7.500 7.500 0 0 0 0 2l-2 1.500 2 3.400 2.300-1a7.500 7.500 0 0 0 1.700 1l.400 2.600h4l.400-2.600a7.500 7.500 0 0 0 1.700-1l2.300 1 2-3.400z"/>', s),
+  gear: s => svg('<path d="M12.220 2h-.440a2 2 0 0 0-2 2v.180a2 2 0 0 1-1 1.730l-.430.250a2 2 0 0 1-2 0l-.150-.080a2 2 0 0 0-2.730.730l-.220.380a2 2 0 0 0 .730 2.730l.150.100a2 2 0 0 1 1 1.720v.510a2 2 0 0 1-1 1.740l-.150.090a2 2 0 0 0-.730 2.730l.220.380a2 2 0 0 0 2.730.730l.150-.080a2 2 0 0 1 2 0l.430.250a2 2 0 0 1 1 1.730V20a2 2 0 0 0 2 2h.440a2 2 0 0 0 2-2v-.180a2 2 0 0 1 1-1.730l.430-.250a2 2 0 0 1 2 0l.150.080a2 2 0 0 0 2.730-.730l.220-.390a2 2 0 0 0-.730-2.730l-.150-.080a2 2 0 0 1-1-1.740v-.500a2 2 0 0 1 1-1.740l.150-.090a2 2 0 0 0 .730-2.730l-.220-.380a2 2 0 0 0-2.730-.730l-.150.080a2 2 0 0 1-2 0l-.430-.250a2 2 0 0 1-1-1.730V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>', s),
+  cal: s => svg('<rect x="3" y="4.500" width="18" height="16.500" rx="3"/><path d="M3 9.500h18M8 2.500v4M16 2.500v4"/>', s),
   auto: s => svg('<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/>', s),
   up: () => svg('<path d="m6 15 6-6 6 6"/>', 18),
   down: () => svg('<path d="m6 9 6 6 6-6"/>', 18),
@@ -569,35 +570,30 @@ let _mid = 0;
 const STAGES = ["Semente", "Broto", "Muda", "Florzinha"];
 const stageOf = lvl => Math.min(3, Math.floor((lvl + 1) / 2));
 function mascot(mood, size, body, live, stage) {
-  const id = "mg" + (++_mid), ink = "#14240F";
+  const ink = "#1E3A16", g1 = body || "#A6E05F", g2 = "#C4EE8C", g3 = "#7FC646";
   stage = stage == null ? stageOf(progressCache ? progressCache.lvl : 0) : stage;
-  const eyes = mood === "sleep"
-    ? `<path d="M36 74q9 8 18 0M66 74q9 8 18 0" stroke="${ink}" stroke-width="4" fill="none" stroke-linecap="round"/>`
-    : `<ellipse cx="45" cy="71" rx="11" ry="${mood === "wow" ? 14 : 13}" fill="#fff"/><ellipse cx="75" cy="71" rx="11" ry="${mood === "wow" ? 14 : 13}" fill="#fff"/>
-       <circle cx="${mood === "calm" ? 45 : 47}" cy="${mood === "calm" ? 76 : 73}" r="${mood === "wow" ? 8 : 7}" fill="${ink}"/><circle cx="${mood === "calm" ? 75 : 77}" cy="${mood === "calm" ? 76 : 73}" r="${mood === "wow" ? 8 : 7}" fill="${ink}"/>
-       <circle cx="${mood === "calm" ? 48 : 50}" cy="${mood === "calm" ? 72 : 69}" r="2.600" fill="#fff"/><circle cx="${mood === "calm" ? 78 : 80}" cy="${mood === "calm" ? 72 : 69}" r="2.600" fill="#fff"/>`;
-  const mouth = mood === "sleep" ? `<path d="M55 90q5 3 10 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`
-    : mood === "wow" ? `<path d="M51 88q9 13 18 0z" fill="${ink}"/><path d="M55 93q5 4 10 0" fill="#FF8C8C"/>`
-    : mood === "calm" ? `<path d="M55 91q5 3 10 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`
-    : `<path d="M52 89q8 8 16 0" stroke="${ink}" stroke-width="3.500" fill="none" stroke-linecap="round"/>`;
-  const zz = mood === "sleep" ? `<text x="96" y="40" font-size="16" font-weight="700" fill="${ink}" opacity=".5" style="font-family:var(--f-display)">z</text><text x="106" y="28" font-size="11" font-weight="700" fill="${ink}" opacity=".35">z</text>` : "";
-  const spark = mood === "wow" ? `<path d="M100 40l2.500 6 6 2.500-6 2.500-2.500 6-2.500-6-6-2.500 6-2.500z" fill="#FFE27A"/><path d="M14 52l1.800 4 4 1.800-4 1.800-1.800 4-1.800-4-4-1.800 4-1.800z" fill="#FFE27A"/>` : "";
-  const sc = [0.62, 0.8, 1, 1][stage];
-  const leaves = `<g transform="translate(60 40) scale(${sc}) translate(-60 -40)">
-      <path d="M60 40c-1-12 5-21 18-25 2 12-4 21-18 25z" fill="url(#${id}l)"/><path d="M60 40c-1-11-7-19-19-21-1 12 5 19 19 21z" fill="url(#${id}l)" opacity=".9"/>
-      <path d="M60 40c-1-12 5-21 18-25" stroke="#2E7D3A" stroke-width="1.200" fill="none" opacity=".35"/></g>`;
-  const flower = stage >= 3 ? `<g transform="translate(78 16)">${[0, 72, 144, 216, 288].map(a => `<ellipse cx="0" cy="-6" rx="4.500" ry="6.500" fill="#FF9EC0" transform="rotate(${a})"/>`).join("")}<circle r="4" fill="#FFD64D"/></g>` : "";
+  const eyes = mood === "sleep" ? `<path d="M38 72q8 6 16 0M66 72q8 6 16 0" stroke="${ink}" stroke-width="4" fill="none" stroke-linecap="round"/>`
+    : mood === "wow" ? `<circle cx="46" cy="70" r="8.500" fill="${ink}"/><circle cx="74" cy="70" r="8.500" fill="${ink}"/><circle cx="49" cy="67" r="3" fill="#fff"/><circle cx="77" cy="67" r="3" fill="#fff"/>`
+    : mood === "calm" ? `<circle cx="46" cy="72" r="5" fill="${ink}"/><circle cx="74" cy="72" r="5" fill="${ink}"/><circle cx="47.500" cy="70.500" r="1.600" fill="#fff"/><circle cx="75.500" cy="70.500" r="1.600" fill="#fff"/>`
+    : `<path d="M38 74q8-10 16 0M66 74q8-10 16 0" stroke="${ink}" stroke-width="4.500" fill="none" stroke-linecap="round"/>`;
+  const mouth = mood === "sleep" ? `<ellipse cx="60" cy="88" rx="3.500" ry="2.500" fill="${ink}"/>`
+    : mood === "wow" || mood === "happy" ? `<path d="M50 84q10 14 20 0z" fill="${ink}"/><path d="M54 90q6 4 12 0" fill="#FF7E86"/>`
+    : `<path d="M54 86q6 5 12 0" stroke="${ink}" stroke-width="3.500" fill="none" stroke-linecap="round"/>`;
+  const extra = mood === "sleep" ? `<text x="94" y="42" font-size="15" font-weight="700" fill="${ink}" opacity=".45" style="font-family:var(--f-display)">z</text><text x="104" y="30" font-size="11" font-weight="700" fill="${ink}" opacity=".3">z</text>`
+    : mood === "wow" ? `<path d="M101 38l2.500 6 6 2.500-6 2.500-2.500 6-2.500-6-6-2.500 6-2.500z" fill="#FFC93C"/><circle cx="16" cy="56" r="3" fill="#FF8FB0"/>` : "";
+  const sc = [0.6, 0.8, 1, 1][stage];
+  const leaves = `<g transform="translate(60 40) scale(${sc}) translate(-60 -40)"><path d="M60 41c-2-13 5-23 19-26 2 13-5 22-19 26z" fill="#3E9E4B"/><path d="M60 41c0-12-7-20-20-22-1 13 6 21 20 22z" fill="#5CBF5A"/></g>`;
+  const flower = stage >= 3 ? `<g transform="translate(79 17)">${[0, 72, 144, 216, 288].map(a => `<ellipse cx="0" cy="-6" rx="4.500" ry="6.500" fill="#FF9EC0" transform="rotate(${a})"/>`).join("")}<circle r="4" fill="#FFD23F"/></g>` : "";
+  const arms = mood === "wow" || mood === "happy"
+    ? `<path d="M17 84q-11-4-12-16" stroke="${g3}" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M103 84q11-4 12-16" stroke="${g3}" stroke-width="9" fill="none" stroke-linecap="round"/>`
+    : `<path d="M17 88q-8 6-8 14" stroke="${g3}" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M103 88q8 6 8 14" stroke="${g3}" stroke-width="9" fill="none" stroke-linecap="round"/>`;
   return `<svg class="mascot ${live ? "live" : ""}" width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true">
-    <defs>
-      <radialGradient id="${id}b" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="${body || "#F3FFD0"}"/><stop offset=".55" stop-color="#BDF06A"/><stop offset="1" stop-color="#6FC24B"/></radialGradient>
-      <linearGradient id="${id}l" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6FD06A"/><stop offset="1" stop-color="#2E8B47"/></linearGradient>
-    </defs>
-    <ellipse cx="60" cy="114" rx="34" ry="4.500" fill="#000" opacity=".12"/>
-    ${leaves}${flower}
-    <path d="M60 38c27 0 47 24 47 52 0 18-17 24-47 24S13 108 13 90c0-28 20-52 47-52z" fill="url(#${id}b)"/>
-    <ellipse cx="40" cy="56" rx="12" ry="8" fill="#fff" opacity=".55" transform="rotate(-30 40 56)"/>
-    <ellipse cx="32" cy="88" rx="7" ry="4.500" fill="#FF8FA3" opacity=".45"/><ellipse cx="88" cy="88" rx="7" ry="4.500" fill="#FF8FA3" opacity=".45"/>
-    ${eyes}${mouth}${zz}${spark}</svg>`;
+    <ellipse cx="60" cy="114" rx="32" ry="4" fill="#000" opacity=".1"/>
+    ${leaves}${flower}${arms}
+    <path d="M60 38c27 0 46 23 46 50 0 18-17 25-46 25S14 106 14 88c0-27 19-50 46-50z" fill="${g1}"/>
+    <path d="M60 38c27 0 46 23 46 50 0 4-1 8-3 11-4-24-20-46-43-48-18-1-33 9-41 24 7-21 23-37 41-37z" fill="${g2}" opacity=".7"/>
+    <ellipse cx="36" cy="84" rx="7" ry="4.500" fill="#FF9AA8" opacity=".75"/><ellipse cx="84" cy="84" rx="7" ry="4.500" fill="#FF9AA8" opacity=".75"/>
+    ${eyes}${mouth}${extra}</svg>`;
 }
 let progressCache = null;
 function moodNow(score) {
@@ -690,6 +686,38 @@ function ring(pct, size, color, inner, track) {
 }
 
 /* ================= HOJE ================= */
+/* Faixa com os 7 dias da semana do dia em edição; toque num dia para registrar nele. */
+function weekStrip(k, P) {
+  const base = parseKey(k), dow = (base.getDay() + 6) % 7, mon = addDays(base, -dow), t = todayKey();
+  const days = Array.from({ length: 7 }, (_, i) => keyOf(addDays(mon, i)));
+  const label = parseKey(k).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return `<div class="wstrip">
+    <div class="wshead"><b>${label[0].toUpperCase() + label.slice(1)}</b><div class="row" style="gap:6px">${k !== t ? `<button class="pillbtn" data-a="day" data-d="0">Hoje</button>` : ""}<button class="iconround" data-a="day" data-d="-7" aria-label="Semana anterior">‹</button><button class="iconround" data-a="day" data-d="7" aria-label="Próxima semana" ${days[6] >= t ? "disabled" : ""}>›</button><button class="pillbtn" data-a="cal">${IC.cal(15)} Calendário</button></div></div>
+    <div class="wdays">${days.map(dk => { const d = parseKey(dk), sc = P.scores[dk] || 0, fut = dk > t;
+      return `<button class="wday ${dk === k ? "on" : ""} ${dk === t ? "today" : ""}" data-a="pickday" data-k="${dk}" ${fut ? "disabled" : ""} aria-label="${dayLabel(dk)}"><small>${WD[d.getDay()]}</small><b class="num">${d.getDate()}</b><i class="${sc >= 80 ? "l3" : sc >= 50 ? "l2" : sc > 0 ? "l1" : ""}"></i></button>`; }).join("")}</div>
+  </div>`;
+}
+function calSheet() {
+  let ref = parseKey(curDay); ref = new Date(ref.getFullYear(), ref.getMonth(), 1);
+  openSheet((s, box) => {
+    const draw = () => {
+      const P = progressCache || progress(), t = todayKey(), y = ref.getFullYear(), mo = ref.getMonth();
+      const first = (new Date(y, mo, 1).getDay() + 6) % 7, n = new Date(y, mo + 1, 0).getDate();
+      const cells = [...Array(first).fill(""), ...Array.from({ length: n }, (_, i) => keyOf(new Date(y, mo, i + 1)))];
+      const name = ref.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+      box.innerHTML = `<div class="grab"></div><div class="row between"><h2>${name[0].toUpperCase() + name.slice(1)}</h2><div class="row" style="gap:6px"><button class="iconround" data-m="-1" aria-label="Mês anterior">‹</button><button class="iconround" data-m="1" aria-label="Próximo mês" ${keyOf(new Date(y, mo + 1, 1)) > t ? "disabled" : ""}>›</button></div></div>
+        <div class="mcal">${["seg", "ter", "qua", "qui", "sex", "sáb", "dom"].map(w => `<span class="mw">${w}</span>`).join("")}
+        ${cells.map(dk => { if (!dk) return `<span></span>`; const sc = P.scores[dk] || 0, fut = dk > t;
+          return `<button class="mday ${sc >= 80 ? "l3" : sc >= 50 ? "l2" : sc > 0 ? "l1" : ""} ${dk === curDay ? "on" : ""} ${dk === t ? "today" : ""}" data-k="${dk}" ${fut ? "disabled" : ""}><b class="num">${parseKey(dk).getDate()}</b>${sc ? `<small class="num">${sc}</small>` : ""}</button>`; }).join("")}</div>
+        <div class="legend"><span><i style="background:var(--surface2)"></i>sem registro</span><span><i style="background:var(--lime);opacity:.45"></i>começou</span><span><i style="background:var(--lime)"></i>50+ pontos</span><span><i style="background:var(--food)"></i>80+</span></div>
+        <p class="small muted">Toque num dia para ver ou corrigir o que registrou nele.</p>`;
+    };
+    draw();
+    s.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; e.stopPropagation();
+      if (b.dataset.m) { ref = new Date(ref.getFullYear(), ref.getMonth() + +b.dataset.m, 1); draw(); }
+      else if (b.dataset.k) { curDay = b.dataset.k; dayPinned = curDay !== todayKey(); closeSheet(true); if (tab !== "hoje") go("hoje"); else render(); } });
+  });
+}
 function renderHoje() {
   const { T, plan } = ctx(), p = S.profile, k = curDay, d = getDay(k), now = nowMin(), P = progress(), today = isToday();
   const hour = new Date().getHours();
@@ -698,7 +726,7 @@ function renderHoje() {
   const score = P.scores[k] ?? dayScore(k);
   const eat = eatenOn(k, plan), H = habitList(), e = sleepOf(k);
   const msg = !today ? (score >= 85 ? "Foi um dia redondo." : score >= 60 ? "Foi um dia forte." : score > 0 ? "Dia registrado em parte." : "Nada registrado nesse dia.") : score >= 85 ? "Dia redondo. Bom trabalho." : score >= 60 ? "Dia forte. Falta pouco." : score >= 30 ? "Bom começo. Siga daí." : hour < 12 ? "Comece pela noite e pelo café." : "Ainda dá tempo de salvar o dia.";
-  const daynav = `<div class="daynav"><button data-a="day" data-d="-1" aria-label="Dia anterior">‹</button><span class="dl">${dayLabel(k)}</span><button data-a="day" data-d="1" aria-label="Próximo dia" ${today ? "disabled" : ""}>›</button>${today ? `<span class="small muted dh">Toque em ‹ para corrigir dias anteriores</span>` : `<button class="link small" data-a="day" data-d="0">Voltar para hoje</button>`}</div>`;
+  const daynav = weekStrip(k, P);
 
   const events = [...routine().map(r => ({ ...r, kind: "sleep" })), ...plan.map(m => ({ m: m.min, t: m.n, kind: "food", id: m.id }))].sort((a, b) => a.m - b.m);
   const nx = events.find(ev => ev.m > now && !(ev.kind === "food" && d.meals[ev.id] != null)) || { ...events[0], m: events[0].m + 1440 };
@@ -713,13 +741,12 @@ function renderHoje() {
 
   return `${header(`${hi}${name}`)}
   ${daynav}
-  <div class="cols">
+  <div class="cols three">
    <div class="col">
-    <section class="hero p-${period()}">
-      ${scene(period())}
-      ${mascot(moodNow(score), 96, null, true)}
+    <section class="hero">
+      ${mascot(moodNow(score), 104, null, true)}
       <div class="hero-top">
-        ${ring(score / 100, 96, "currentColor", `<text x="48" y="53" text-anchor="middle" style="font-family:var(--f-display)" font-size="30" font-weight="600" fill="currentColor">${score}</text><text x="48" y="69" text-anchor="middle" font-size="10" opacity=".75" fill="currentColor">de 100</text>`, period() === "night" ? "rgba(255,255,255,.22)" : "rgba(16,36,15,.14)")}
+        ${ring(score / 100, 96, "#1E3A16", `<text x="48" y="53" text-anchor="middle" style="font-family:var(--f-display)" font-size="30" font-weight="600" fill="currentColor">${score}</text><text x="48" y="69" text-anchor="middle" font-size="10" opacity=".75" fill="currentColor">de 100</text>`, "rgba(30,58,22,.12)")}
         <div style="min-width:0"><div class="lbl">${today ? "Seu dia" : dayLabel(k)}</div><div class="big">${msg}</div></div>
       </div>
       <div class="hero-chips"><span class="hchip">${IC.flame(14)} ${P.streak} ${P.streak === 1 ? "dia seguido" : "dias seguidos"}</span><span class="hchip">Nível ${P.lvl + 1}</span></div>
@@ -734,14 +761,6 @@ function renderHoje() {
     </div>
    </div>
    <div class="col">
-    <div class="card profile-panel desk">
-      <div class="row" style="gap:14px">${avatar("avatar lg")}<div class="stack" style="gap:3px;min-width:0"><b class="pp-name">${esc(p.name || "Você")}</b><span class="small muted">Nível ${P.lvl + 1} · ${P.name}</span></div><a class="pillbtn" href="#perfil" style="margin-left:auto">${IC.gear(15)} Ajustes</a></div>
-      <div class="pp-stats">
-        <a href="#meta"><span class="ic sleep">${IC.flame(18)}</span><b class="num">${P.streak}</b><small>dias seguidos</small></a>
-        <a href="#meta"><span class="ic amber">${IC.star(18)}</span><b class="num">${fmt(P.xp)}</b><small>pontos</small></a>
-        <a href="#meta"><span class="ic food">${IC.trophy(18)}</span><b class="num">${Object.keys(S.badges).length}</b><small>conquistas</small></a>
-      </div>
-    </div>
     <div class="card">
       <div class="row between"><h2>Refeições</h2><a class="pillbtn" href="#comida">Ver fichas ${IC.arrow(14)}</a></div>
       <div><div class="bar" style="height:8px"><span style="width:${Math.min(100, eat.kcal / T.kcal * 100)}%"></span></div>
@@ -751,7 +770,18 @@ function renderHoje() {
           <span class="meal-body"><span class="n">${m.n}${currentMeal && currentMeal.id === m.id ? '<span class="tagnow">agora</span>' : ""}</span><span class="d" style="display:${o ? "block" : "none"}">${o ? `${esc(o.t)}${o.q !== 1 && !o.free ? ` (${o.q < 1 ? "metade" : "repeti"})` : ""} · ${o.kcal} kcal` : ""}</span></span>
           <span class="t">${fromMin(m.min)}</span><span class="chev">›</span></button>`; }).join("")}</div>
     </div>
-    ${today ? `<p class="tipline">${IC.spark()}<span>${esc(insight)}</span></p>` : ""}
+   </div>
+   <div class="col side">
+    <div class="card profile-panel desk">
+      <a class="iconround pp-gear" href="#perfil" aria-label="Ajustes" title="Ajustes">${IC.gear(17)}</a>
+      <div class="pp-top">${avatar("avatar xl")}<b class="pp-name">${esc(p.name || "Você")}</b><span class="pill">Nível ${P.lvl + 1} · ${P.name}</span></div>
+      <div class="pp-stats">
+        <a href="#meta"><span class="ic sleep">${IC.flame(18)}</span><b class="num">${P.streak}</b><small>dias seguidos</small></a>
+        <a href="#meta"><span class="ic amber">${IC.star(18)}</span><b class="num">${fmt(P.xp)}</b><small>pontos</small></a>
+        <a href="#meta"><span class="ic food">${IC.trophy(18)}</span><b class="num">${Object.keys(S.badges).length}</b><small>conquistas</small></a>
+      </div>
+    </div>
+    ${today ? `<div class="card tipcard"><span class="tipic">${IC.spark()}</span><div><b>Dica do dia</b><p>${esc(insight)}</p></div></div>` : ""}
    </div>
   </div>`;
 }
@@ -1351,7 +1381,7 @@ function celebrate() {
 let userEmail = "", gateMode = "in", gateMsg = "", gateBusy = false, view = "app";
 function renderGate() {
   return `<div class="gate"><div class="box">
-    <div class="gate-scene">${scene(period())}${mascot("happy", 120, null, true)}</div>
+    <div class="gate-scene">${mascot("happy", 130, null, true)}</div>
     <div class="stack" style="gap:6px"><h1>Sempre Saudáveis</h1><p class="muted">Sono, fichas de alimentação e meta de peso. Entre para sincronizar celular e computador.</p></div>
     <form class="card" id="auth">
       <div class="seg" data-seg="mode"><button type="button" class="${gateMode === "in" ? "on" : ""}" data-v="in">Entrar</button><button type="button" class="${gateMode === "up" ? "on" : ""}" data-v="up">Criar conta</button></div>
@@ -1398,10 +1428,12 @@ document.addEventListener("click", e => {
   else if (a === "day") {
     const dd = +b.dataset.d, t = todayKey();
     if (dd === 0) { curDay = t; dayPinned = false; }
-    else { const nk = keyOf(addDays(parseKey(curDay), dd)); if (nk > t || daysBetween(nk, t) > 90) return; curDay = nk; dayPinned = nk !== t; }
+    else { let nk = keyOf(addDays(parseKey(curDay), dd)); if (nk > t) nk = t; if (daysBetween(nk, t) > 370) return; curDay = nk; dayPinned = nk !== t; }
     render();
   }
   else if (a === "mealedit") mealEditSheet(b.dataset.id);
+  else if (a === "cal") calSheet();
+  else if (a === "pickday") { if (b.dataset.k <= todayKey()) { curDay = b.dataset.k; dayPinned = curDay !== todayKey(); render(); } }
   else if (a === "quick") quickSheet();
   else if (a === "photo-rm") { delete S.profile.photo; S.profile.u = Date.now(); commit(); render(); toast("Foto removida."); }
   else if (a === "totop") window.scrollTo({ top: 0, behavior: "smooth" });

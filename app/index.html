@@ -734,6 +734,103 @@ div.rowcard{box-shadow:none}
   .gate,.onb{margin-left:-150px}
   .hero{min-height:230px}
 }
+
+/* ===== v6: mais leve e limpo, tela inteira, calendário ===== */
+body{background-image:none!important;background-color:var(--bg)}
+:root{--soft:0 1px 2px rgba(20,30,20,.04),0 6px 20px rgba(20,30,20,.05)}
+.card{border:1px solid var(--line);box-shadow:var(--soft)}
+.btn,.btn.sleep,.btn.food,.btn.amber,.btn:not(.ghost){box-shadow:none}
+.btn.ghost{border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.btn.ghost:active,.pillbtn:active{transform:scale(.98);box-shadow:none}
+.pillbtn{border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.04);padding:7px 12px;font-weight:600}
+.pillbtn:hover,.btn.ghost:hover{background:var(--surface2);border-color:var(--line)}
+.opt{box-shadow:none;border:1px solid var(--line)}
+.opt:hover{border-color:color-mix(in oklab,var(--food) 45%,var(--line));box-shadow:var(--soft)}
+.hpill,.mini button,.daynav button[data-d],.rowcard{box-shadow:none}
+.rowcard{border:1px solid var(--line);box-shadow:var(--soft)}
+.rowcard:hover{border-color:color-mix(in oklab,var(--fg) 18%,var(--line))}
+.seg{border:1px solid var(--line)}
+.seg button.on{box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.field input:not([type=hidden]):not([type=checkbox]),.field select,.field textarea{border-width:1px!important;box-shadow:none}
+.nstep,.tpick{border-width:1px}
+.mini button{background:var(--surface2)}
+.mini button.plus{background:var(--lime)}
+.fab{box-shadow:0 8px 20px rgba(60,110,20,.25)}
+
+/* refeições: linhas limpas */
+.meal{margin:0;width:100%;padding:13px 2px;border-radius:0;border-top:1px solid var(--line)}
+.meal:hover{background:transparent}
+.meal:hover .n{color:var(--food)}
+.meal:first-of-type{border-top:0}
+
+/* topo limpo */
+.hero{background:linear-gradient(135deg,#EEFBD3 0%,#D7F59A 55%,#C3EE73 100%)!important;color:#14240F;min-height:0;border:0;box-shadow:none}
+.hero::before,.hero::after{display:none!important}
+.hero .hchip{background:rgba(255,255,255,.6);backdrop-filter:none}
+.hero .big{text-shadow:none}
+.hero .mascot{right:16px;bottom:8px}
+.pet::after,.gate .box::before{display:none!important}
+.gate-scene{height:auto;background:radial-gradient(circle at 50% 60%,#DDF7A8 0,#C9F07F 55%,transparent 56%);padding:10px 0;border-radius:0}
+
+/* faixa da semana */
+.wstrip{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--soft)}
+.wshead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.wshead > b{font-family:var(--f-display);font-size:18px;font-weight:600}
+.iconround{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;font-size:18px;line-height:1;padding:0 0 2px;color:var(--fg)}
+.iconround:hover{background:var(--surface2)}
+.iconround[disabled]{opacity:.35;cursor:default}
+.wdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.wday{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid transparent;background:var(--surface2);border-radius:16px;padding:9px 0 8px;color:var(--fg);min-width:0}
+.wday small{font-size:11.5px;color:var(--muted);text-transform:capitalize}
+.wday b{font-family:var(--f-display);font-size:19px;font-weight:600;line-height:1.1}
+.wday i{width:6px;height:6px;border-radius:50%;background:transparent}
+.wday i.l1{background:color-mix(in oklab,var(--lime) 60%,var(--surface2))}
+.wday i.l2{background:var(--lime2)}
+.wday i.l3{background:var(--food)}
+.wday:hover:not([disabled]){border-color:var(--line);background:var(--surface)}
+.wday.today{border-color:var(--lime2)}
+.wday.on{background:var(--fg);color:var(--bg)}
+.wday.on small{color:color-mix(in oklab,var(--bg) 75%,transparent)}
+.wday[disabled]{opacity:.35;cursor:default}
+.mcal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.mw{font-size:12px;color:var(--muted);text-align:center;padding-bottom:2px}
+.mday{aspect-ratio:1;border:1px solid transparent;border-radius:14px;background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--fg);min-width:0;padding:0}
+.mday b{font-size:15px;font-weight:600}
+.mday small{font-size:10px;opacity:.75}
+.mday.l1{background:color-mix(in oklab,var(--lime) 45%,var(--surface2))}
+.mday.l2{background:var(--lime);color:var(--ink)}
+.mday.l3{background:var(--food);color:#fff}
+.mday.today{border-color:var(--fg)}
+.mday.on{outline:2px solid var(--sleep);outline-offset:1px}
+.mday[disabled]{opacity:.35}
+.tipcard{flex-direction:row;gap:12px;align-items:flex-start}
+.tipcard .tipic{flex:0 0 auto;width:36px;height:36px;border-radius:12px;background:var(--sleep-soft);color:var(--sleep);display:grid;place-items:center}
+.tipcard b{font-size:14.5px}
+.tipcard p{font-size:14px;color:var(--muted);margin-top:2px}
+
+/* tela inteira no computador */
+@media (min-width:900px){
+  body{padding-left:calc(16px + 248px + 28px);padding-right:28px}
+  .app{max-width:none;padding-block:28px 40px}
+  .tabbar{box-shadow:var(--soft)}
+  .cols.three{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .cols.three > .side{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+}
+@media (min-width:1360px){
+  .cols{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
+  .cols.three{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(300px,.75fr)}
+  .cols.three > .side{grid-column:auto;display:flex;flex-direction:column}
+  .opts{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (min-width:1700px){.app{max-width:1600px}}
+@media (max-width:520px){.wshead .pillbtn{padding:6px 10px;font-size:12.5px}.wday b{font-size:17px}.wday{padding:8px 0 7px;border-radius:13px}}
+.profile-panel{position:relative;align-items:stretch}
+.pp-top{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding-top:4px}
+.avatar.xl{width:88px;height:88px;font-size:34px;box-shadow:0 0 0 4px var(--surface),0 0 0 6px var(--lime)}
+.pp-gear{position:absolute;top:14px;right:14px;text-decoration:none}
+.pp-name{white-space:normal!important;text-align:center}
+.pp-stats a{padding:12px 4px}
+.pp-stats small{text-align:center;line-height:1.2}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
