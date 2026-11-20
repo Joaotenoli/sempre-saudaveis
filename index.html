@@ -82,6 +82,22 @@ ol li::before{content:counter(s);position:absolute;left:0;top:0;width:26px;heigh
 .dlc .btn{width:100%;padding:12px 14px;font-size:14.5px}
 .warn{font-size:13px;color:var(--muted);background:var(--surface2);border-radius:12px;padding:10px 12px}
 .warn b{color:var(--fg)}
+.smart-wrap{padding-block:24px 0}
+.smart{background:var(--surface);border-radius:26px;box-shadow:var(--shadow);padding:24px;display:flex;flex-direction:column;gap:16px;border:2px solid var(--lime2)}
+.smart.alert{border-color:#F2A33A;background:color-mix(in oklab,#FFE9C7 60%,var(--surface))}
+.smart h2{font-size:24px}
+.smart .lead{color:var(--muted);font-size:15.5px}
+.smart ol{gap:14px}
+.smart ol li{font-size:16px}
+.smart .row2{display:flex;gap:10px;flex-wrap:wrap}
+.smart .tag{align-self:flex-start}
+.ico{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--surface2);vertical-align:-8px;margin:0 2px}
+.cmd{display:flex;gap:8px;align-items:center;background:var(--surface2);border-radius:12px;padding:10px 12px;font-family:ui-monospace,Menlo,monospace;font-size:13px;overflow-x:auto}
+.cmd code{flex:1;white-space:nowrap}
+.cmd button{border:0;background:var(--fg);color:var(--bg);border-radius:9px;padding:7px 12px;font:600 13px var(--fb);cursor:pointer;flex:0 0 auto}
+details.more{border-top:1px solid var(--line);padding-top:12px}
+details.more summary{cursor:pointer;font-weight:600}
+details.more > div{margin-top:12px;display:flex;flex-direction:column;gap:12px}
 footer{padding-block:28px 48px;color:var(--muted);font-size:13.5px}
 @media (max-width:980px){.dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:820px){.hero{grid-template-columns:1fr;padding:30px 22px}.phone{display:none}.grid{grid-template-columns:1fr}.feat{grid-template-columns:repeat(2,minmax(0,1fr))}section{padding-block:30px}}
@@ -118,6 +134,8 @@ footer{padding-block:28px 48px;color:var(--muted);font-size:13.5px}
     </div></div>
   </header>
 
+  <section id="seu" class="smart-wrap" hidden></section>
+
   <section>
     <div class="feat">
       <div><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.800A9 9 0 1 1 11.200 3a7 7 0 0 0 9.800 9.800z"/></svg></span><h3>Sono</h3><p>Registro em 10 segundos, rotina por horário e transição gradual até a hora que você quer dormir.</p></div>
@@ -146,7 +164,7 @@ footer{padding-block:28px 48px;color:var(--muted);font-size:13.5px}
     <div class="dl">
       <div class="dlc"><h3>Mac</h3><span class="sub">Escolha pelo processador do seu Mac (menu Apple → Sobre este Mac).</span>
         <div class="btns"><a class="btn lime" href="https://github.com/Joaotenoli/sempre-saudaveis/releases/latest/download/SempreSaudaveis-mac-arm64.dmg">Chip Apple (M1 a M4)</a><a class="btn ghost" href="https://github.com/Joaotenoli/sempre-saudaveis/releases/latest/download/SempreSaudaveis-mac-x64.dmg">Processador Intel</a></div>
-        <p class="warn">Se aparecer <b>"não foi possível verificar"</b>: abra <b>Ajustes do Sistema → Privacidade e Segurança</b> e clique em <b>Abrir Mesmo Assim</b>.</p></div>
+        <p class="warn">1. Abra o arquivo e arraste o app para <b>Aplicativos</b>. 2. Abra o app; vai aparecer <b>"não foi possível verificar"</b>: clique em <b>Concluído</b>. 3. Vá em <b>Ajustes do Sistema → Privacidade e Segurança</b>, role até o fim e clique em <b>Abrir Mesmo Assim</b>.</p></div>
       <div class="dlc"><h3>Windows</h3><span class="sub">Windows 10 ou 11, 64 bits.</span>
         <div class="btns"><a class="btn lime" href="https://github.com/Joaotenoli/sempre-saudaveis/releases/latest/download/SempreSaudaveis-windows.exe">Baixar para Windows</a></div>
         <p class="warn">Se aparecer <b>"O Windows protegeu o computador"</b>: clique em <b>Mais informações</b> e depois em <b>Executar assim mesmo</b>.</p></div>
@@ -174,6 +192,35 @@ footer{padding-block:28px 48px;color:var(--muted);font-size:13.5px}
 <script>
 (function () {
   var ua = navigator.userAgent, p = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? "ios" : /Android/.test(ua) ? "android" : /Mac/.test(ua) ? "mac" : /Win/.test(ua) ? "win" : "";
+  var inapp = /WhatsApp|Instagram|FBAN|FBAV|FB_IAB|Line\/|MicroMessenger|TikTok|musical_ly|Snapchat|; wv\)/.test(ua);
+  var iosNotSafari = p === "ios" && /CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua);
+  var D = "https://github.com/Joaotenoli/sempre-saudaveis/releases/latest/download/";
+  var share = '<span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></span>';
+  var dots = '<span class="ico">⋮</span>';
+  var smart = document.getElementById("seu"), html = "";
+  if (inapp) html = '<div class="smart alert"><span class="tag">Atenção</span><h2>Abra esta página no navegador</h2><p class="lead">Você abriu o link dentro de outro app (WhatsApp, Instagram...). Por aqui não dá para instalar nem baixar o Sempre Saudáveis.</p><ol>' +
+      (p === "ios" ? '<li>Toque em ' + share + ' ou em <b>⋯</b>, no canto da tela.</li><li>Escolha <b>Abrir no Safari</b> (ou "Abrir no navegador").</li><li>No Safari, siga os passos de instalação que vão aparecer aqui.</li>'
+                   : '<li>Toque em ' + dots + ' no canto de cima da tela.</li><li>Escolha <b>Abrir no Chrome</b> (ou "Abrir no navegador").</li><li>No Chrome, siga os passos de instalação que vão aparecer aqui.</li>') +
+      '</ol><p class="lead">Ou copie o endereço e cole no navegador:</p><div class="cmd"><code>' + location.origin + location.pathname + '</code><button type="button" data-copy="' + location.origin + location.pathname + '">Copiar</button></div></div>';
+  else if (p === "ios") html = '<div class="smart"><span class="tag">Seu aparelho: iPhone</span><h2>Instale em 3 toques</h2>' +
+      (iosNotSafari ? '<p class="lead"><b>Use o Safari.</b> Em outros navegadores do iPhone a opção pode não aparecer. Copie o endereço e abra no Safari: <span class="cmd" style="display:inline-flex"><code>' + location.origin + location.pathname + '</code><button type="button" data-copy="' + location.origin + location.pathname + '">Copiar</button></span></p>' : '<p class="lead">No iPhone o app instala pelo Safari, sem App Store.</p>') +
+      '<ol><li>Toque no botão Compartilhar ' + share + ', na barra de baixo do Safari.</li><li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li><li>Toque em <b>Adicionar</b>. Abra o app pelo ícone novo e entre com sua conta.</li></ol>' +
+      '<div class="row2"><a class="btn ghost" href="app/">Prefiro usar no navegador</a></div></div>';
+  else if (p === "android") html = '<div class="smart"><span class="tag">Seu aparelho: Android</span><h2>Instale o app</h2><p class="lead">O jeito mais fácil é pelo Chrome, sem baixar arquivo.</p>' +
+      '<div class="row2"><button class="btn lime" data-install hidden>Instalar agora</button></div>' +
+      '<ol><li>No Chrome, toque em ' + dots + ' no canto de cima.</li><li>Toque em <b>Instalar app</b> (ou "Adicionar à tela inicial").</li><li>Confirme em <b>Instalar</b>. Abra pelo ícone e entre com sua conta.</li></ol>' +
+      '<details class="more"><summary>Prefiro baixar o arquivo .apk</summary><div><a class="btn ghost" href="' + D + 'SempreSaudaveis-android.apk">Baixar o .apk</a><ol><li>Se o Chrome avisar que o arquivo pode ser perigoso, toque em <b>Baixar mesmo assim</b>.</li><li>Abra o arquivo baixado.</li><li>Quando pedir, toque em <b>Configurações</b> e ative <b>Permitir desta fonte</b>. Volte e toque em <b>Instalar</b>.</li></ol></div></details></div>';
+  else if (p === "mac") html = '<div class="smart"><span class="tag">Seu aparelho: Mac</span><h2>Instale no Mac</h2><p class="lead"><b>Recomendado:</b> abra esta página no <b>Chrome</b> ou no <b>Edge</b> e clique em <b>Instalar agora</b> (ou no ícone de instalar na barra de endereço). Não tem aviso de segurança. No Safari: menu <b>Arquivo → Adicionar ao Dock</b>.</p>' +
+      '<div class="row2"><button class="btn lime" data-install hidden>Instalar agora</button></div>' +
+      '<details class="more"><summary>Prefiro o instalador .dmg</summary><div><div class="row2"><a class="btn ghost" href="' + D + 'SempreSaudaveis-mac-arm64.dmg">Mac com chip Apple (M1 a M4)</a><a class="btn ghost" href="' + D + 'SempreSaudaveis-mac-x64.dmg">Mac Intel</a></div>' +
+      '<ol><li>Abra o arquivo baixado e arraste o app para <b>Aplicativos</b>.</li><li>Abra o app. Vai aparecer <b>"não foi possível verificar"</b>: clique em <b>Concluído</b>.</li><li>Abra <b>Ajustes do Sistema → Privacidade e Segurança</b>, role até o fim e clique em <b>Abrir Mesmo Assim</b>. Digite sua senha do Mac.</li></ol>' +
+      '<p class="lead">Se ainda não abrir, cole isto no app <b>Terminal</b> e aperte Enter:</p><div class="cmd"><code>xattr -dr com.apple.quarantine "/Applications/Sempre Saudaveis.app"</code><button type="button" data-copy=\'xattr -dr com.apple.quarantine "/Applications/Sempre Saudaveis.app"\'>Copiar</button></div></div></details></div>';
+  else if (p === "win") html = '<div class="smart"><span class="tag">Seu aparelho: Windows</span><h2>Instale no Windows</h2><p class="lead"><b>Recomendado:</b> no <b>Edge</b> ou <b>Chrome</b>, clique em <b>Instalar agora</b> (ou no ícone de instalar na barra de endereço). Não tem aviso de segurança.</p>' +
+      '<div class="row2"><button class="btn lime" data-install hidden>Instalar agora</button></div>' +
+      '<details class="more"><summary>Prefiro o instalador .exe</summary><div><a class="btn ghost" href="' + D + 'SempreSaudaveis-windows.exe">Baixar para Windows</a><ol><li>Abra o arquivo baixado.</li><li>Se aparecer <b>"O Windows protegeu o computador"</b>, clique em <b>Mais informações</b>.</li><li>Clique em <b>Executar assim mesmo</b>. O app abre e ganha atalho na área de trabalho.</li></ol></div></details></div>';
+  if (html) { smart.innerHTML = html; smart.hidden = false; }
+  document.addEventListener("click", function (e) { var c = e.target.closest("[data-copy]"); if (!c) return; var t = c.getAttribute("data-copy");
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { c.textContent = "Copiado"; }).catch(function () { var r = document.createRange(); r.selectNodeContents(c.previousElementSibling); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }); });
   var card = document.querySelector('.plat[data-p="' + p + '"]');
   if (card) { card.classList.add("you"); card.querySelector(".tag").hidden = false; card.parentNode.insertBefore(card, card.parentNode.firstChild); }
   var here = location.origin + location.pathname.replace(/index\.html$/, "");
@@ -183,10 +230,12 @@ footer{padding-block:28px 48px;color:var(--muted);font-size:13.5px}
   var standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
   if (standalone) { location.replace("app/"); return; }
   var deferred = null, btn = document.getElementById("install"), hint = document.getElementById("hint");
-  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; btn.hidden = false; });
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; btn.hidden = false; document.querySelectorAll("[data-install]").forEach(function (b) { b.hidden = false; }); });
+  document.addEventListener("click", function (e) { if (e.target.closest("[data-install]")) btn.click(); });
   btn.addEventListener("click", function () { if (!deferred) return; deferred.prompt(); deferred.userChoice.then(function (r) { if (r.outcome === "accepted") { btn.hidden = true; hint.textContent = "Instalado. Procure o ícone do Sempre Saudáveis no seu aparelho."; } deferred = null; }); });
   window.addEventListener("appinstalled", function () { btn.hidden = true; hint.textContent = "Instalado. Procure o ícone do Sempre Saudáveis no seu aparelho."; });
-  if (p === "ios") hint.textContent = "No iPhone: Safari, botão Compartilhar, Adicionar à Tela de Início.";
+  if (p === "ios") hint.textContent = "No iPhone: Safari, botão Compartilhar, Adicionar à Tela de Início. Veja o passo a passo abaixo.";
+  if (inapp) { hint.textContent = "Abra esta página no Safari ou no Chrome para instalar. Veja abaixo."; document.getElementById("seu").scrollIntoView(); }
   if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("app/sw.js", { scope: "app/" }).catch(function () {});
 })();
 </script>
