@@ -606,6 +606,57 @@ function moodNow(score) {
   return asleep ? "sleep" : score >= 85 ? "wow" : score >= 35 ? "happy" : "calm";
 }
 
+/* ================= foto de perfil ================= */
+function avatar(cls) {
+  const name = S.profile.name || (userEmail ? userEmail.split("@")[0] : "?");
+  return S.profile.photo ? `<span class="${cls} has-photo"><img src="${S.profile.photo}" alt=""></span>` : `<span class="${cls}">${esc((name[0] || "?").toUpperCase())}</span>`;
+}
+function photoFrom(file) {
+  return new Promise((ok, bad) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const c = document.createElement("canvas"), n = 192; c.width = c.height = n; const g = c.getContext("2d"), m = Math.min(img.width, img.height);
+      g.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, n, n); URL.revokeObjectURL(url); ok(c.toDataURL("image/jpeg", 0.82)); };
+    img.onerror = () => { URL.revokeObjectURL(url); bad(); };
+    img.src = url;
+  });
+}
+document.addEventListener("change", async e => {
+  if (e.target.id !== "photo-in" || !e.target.files || !e.target.files[0]) return;
+  try { S.profile.photo = await photoFrom(e.target.files[0]); S.profile.u = Date.now(); commit(); render(); toast("Foto atualizada."); }
+  catch (err) { toast("Não consegui abrir essa imagem. Tente outra."); }
+});
+
+/* ================= cena pintada (muda com a hora do dia) ================= */
+function period() { const h = new Date().getHours(); return h < 5 || h >= 20 ? "night" : h < 8 ? "dawn" : h < 16 ? "day" : "dusk"; }
+function scene(per) {
+  const id = "sc" + (++_mid);
+  const sky = { dawn: ["#FFC39C", "#FFE2BC", "#DCEFD6"], day: ["#9ED3EC", "#D4EEF0", "#EEF7DE"], dusk: ["#F1906F", "#F8C392", "#E9C1D2"], night: ["#121838", "#262C66", "#47468A"] }[per];
+  const hl = per === "night" ? ["#2B3768", "#22405A", "#1C4A3A", "#163A2E"] : per === "dusk" ? ["#C6A3B8", "#97B27C", "#64A24E", "#4E8C3E"] : ["#B5D6C6", "#8CC67A", "#63B34C", "#4A9A3A"];
+  const cl = per === "night" ? 0.12 : 0.78, sunC = per === "dusk" ? "#FFB27A" : "#FFE39A";
+  const stars = per === "night" ? Array.from({ length: 22 }, (_, i) => `<circle cx="${(i * 97) % 600}" cy="${(i * 53) % 120 + 8}" r="${i % 3 ? 1 : 1.700}" fill="#fff" opacity="${0.4 + (i % 4) * 0.15}"/>`).join("") : "";
+  const birds = per !== "night" ? `<g stroke="${per === "dusk" ? "#6A4A5A" : "#4F5A6A"}" stroke-width="1.700" fill="none" stroke-linecap="round" opacity=".7"><path d="M290 64q6-6 12 0q6-6 12 0"/><path d="M322 50q5-5 10 0q5-5 10 0"/><path d="M262 82q4-4 8 0q4-4 8 0"/></g>` : "";
+  const grass = Array.from({ length: 34 }, (_, i) => { const x = 8 + i * 18 + (i % 3) * 4, y = 236 - (i % 5) * 3; return `<path d="M${x} ${y + 14}q${i % 2 ? 2 : -2} -8 ${i % 2 ? 5 : -3} -${12 + (i % 4) * 3}"/>`; }).join("");
+  return `<svg class="scene" viewBox="0 0 600 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>
+    <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset=".55" stop-color="${sky[1]}"/><stop offset="1" stop-color="${sky[2]}"/></linearGradient>
+    <filter id="${id}p" x="-5%" y="-10%" width="110%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".03" numOctaves="3" seed="4"/><feDisplacementMap in="SourceGraphic" scale="12"/></filter>
+    <filter id="${id}c" x="-20%" y="-40%" width="140%" height="180%"><feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="2" seed="9"/><feDisplacementMap in="SourceGraphic" scale="16"/><feGaussianBlur stdDeviation="1.400"/></filter>
+    <radialGradient id="${id}g"><stop offset="0" stop-color="${per === "night" ? "#E8E6FF" : "#FFF4CF"}" stop-opacity=".9"/><stop offset="1" stop-color="#FFF4CF" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="600" height="260" fill="url(#${id}s)"/>
+  <g filter="url(#${id}c)" opacity=".5"><path d="M0 40 C120 20 260 60 380 30 S560 10 600 30" stroke="#fff" stroke-width="18" fill="none" opacity=".35"/><path d="M40 110 C160 90 300 120 420 100" stroke="#fff" stroke-width="10" fill="none" opacity=".25"/></g>
+  ${stars}
+  <circle cx="455" cy="70" r="90" fill="url(#${id}g)"/>
+  ${per === "night" ? `<circle cx="455" cy="68" r="20" fill="#F3EFD8"/><circle cx="465" cy="62" r="18" fill="${sky[1]}" opacity=".9"/>` : `<circle cx="455" cy="72" r="26" fill="${sunC}"/>`}
+  <g filter="url(#${id}c)" fill="#fff" opacity="${cl}"><ellipse cx="110" cy="62" rx="46" ry="16"/><ellipse cx="148" cy="52" rx="34" ry="18"/><ellipse cx="180" cy="64" rx="38" ry="13"/><ellipse cx="350" cy="102" rx="40" ry="12"/><ellipse cx="382" cy="94" rx="26" ry="13"/><ellipse cx="560" cy="120" rx="34" ry="10"/></g>
+  ${birds}
+  <path filter="url(#${id}p)" d="M-10 172 C70 132 160 142 240 152 S420 118 610 140 V270 H-10z" fill="${hl[0]}"/>
+  <path filter="url(#${id}p)" d="M-10 200 C90 160 200 176 300 186 S480 158 610 176 V270 H-10z" fill="${hl[1]}"/>
+  <g filter="url(#${id}p)"><rect x="96" y="150" width="6" height="40" fill="#5A4030"/><circle cx="99" cy="148" r="18" fill="${hl[3]}"/><circle cx="86" cy="158" r="13" fill="${hl[2]}"/><circle cx="112" cy="156" r="14" fill="${hl[2]}"/></g>
+  <path filter="url(#${id}p)" d="M-10 238 C120 212 260 224 360 220 S520 196 610 202 V270 H-10z" fill="${hl[2]}"/>
+  <g stroke="${per === "night" ? "#2F6A4E" : "#9BD86E"}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7">${grass}</g>
+  </svg>`;
+}
+
 /* ================= navegação ================= */
 let tab = (location.hash || "").slice(1);
 if (!TABS.some(t => t[0] === tab)) tab = "hoje";
@@ -614,22 +665,22 @@ window.addEventListener("hashchange", () => { const t = location.hash.slice(1); 
 function go(t, anchor) { scrollTo = anchor || null; if (tab === t) { render(); } else location.hash = t; }
 
 function renderTabs() {
-  $("#tabs").innerHTML = TABS.map(([id, l, ic]) => `<a href="#${id}" data-t="${id}" class="${tab === id ? "on" : ""}" ${tab === id ? 'aria-current="page"' : ""}>${IC[ic](22)}<span>${l}</span></a>`).join("");
+  $("#tabs").innerHTML = TABS.map(([id, l, ic]) => `<a href="#${id}" data-t="${id}" class="t-${id} ${tab === id ? "on" : ""}" ${tab === id ? 'aria-current="page"' : ""}>${IC[ic](22)}<span>${l}</span></a>`).join("");
   const foot = $("#sidefoot"); if (!foot) return;
   const name = S.profile.name || (uid ? userEmail.split("@")[0] : "Sem conta");
   foot.innerHTML = `<div class="seg themeseg" data-seg="theme" aria-label="Aparência">${[["auto", "auto", "Automático"], ["light", "sun", "Claro"], ["dark", "moon", "Escuro"]].map(([v, ic, l]) => `<button type="button" class="${themePref() === v ? "on" : ""}" data-v="${v}" title="${l}" aria-label="${l}">${IC[ic](17)}</button>`).join("")}</div>
-    <a class="acct" href="#perfil"><span class="av">${esc((name[0] || "?").toUpperCase())}</span><span class="at"><b>${esc(name)}</b><small id="sync2"></small></span></a>`;
+    <a class="sidelink ${tab === "perfil" ? "on" : ""}" href="#perfil">${IC.gear(20)}<span>Ajustes</span></a>
+    <a class="acct" href="#perfil">${avatar("av")}<span class="at"><b>${esc(name)}</b><small id="sync2"></small></span></a>`;
 }
 const SYNC_TXT = { local: ["", "Só neste aparelho"], ok: ["ok", "Sincronizado"], busy: ["busy", "Sincronizando"], off: ["off", "Offline · salvo aqui"] };
 function renderSync() {
   const [c, t] = SYNC_TXT[syncState];
-  const el = $("#sync"); if (el) { el.className = "me " + c; el.title = t; el.setAttribute("aria-label", "Ajustes · " + t); }
+  const el = $("#sync"); if (el) { el.className = "me " + c + (S.profile.photo ? " has-photo" : ""); el.title = t; el.setAttribute("aria-label", "Ajustes · " + t); }
   const s2 = $("#sync2"); if (s2) { s2.textContent = t; s2.className = c; }
 }
 function header(title, sub) {
   const date = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
-  const ini = ((S.profile.name || userEmail || "?")[0] || "?").toUpperCase();
-  return `<header class="top"><div class="stack" style="gap:6px"><span class="sub">${sub || date}</span><h1>${title}</h1></div><button id="sync" class="me" data-a="go" data-t="perfil">${esc(ini)}</button></header>`;
+  return `<header class="top"><div class="stack" style="gap:6px"><span class="sub">${sub || date}</span><h1>${title}</h1></div><button id="sync" class="me" data-a="go" data-t="perfil">${avatar("mei")}</button></header>`;
 }
 function ring(pct, size, color, inner, track) {
   const sw = Math.round(size / 11), r = size / 2 - sw / 2 - 1, c = 2 * Math.PI * r, off = c * (1 - clamp(pct, 0, 1));
@@ -664,10 +715,11 @@ function renderHoje() {
   ${daynav}
   <div class="cols">
    <div class="col">
-    <section class="hero">
+    <section class="hero p-${period()}">
+      ${scene(period())}
       ${mascot(moodNow(score), 96, null, true)}
       <div class="hero-top">
-        ${ring(score / 100, 96, "#10240F", `<text x="48" y="53" text-anchor="middle" style="font-family:var(--f-display)" font-size="30" font-weight="600">${score}</text><text x="48" y="69" text-anchor="middle" font-size="10" opacity=".7">de 100</text>`, "rgba(16,36,15,.14)")}
+        ${ring(score / 100, 96, "currentColor", `<text x="48" y="53" text-anchor="middle" style="font-family:var(--f-display)" font-size="30" font-weight="600" fill="currentColor">${score}</text><text x="48" y="69" text-anchor="middle" font-size="10" opacity=".75" fill="currentColor">de 100</text>`, period() === "night" ? "rgba(255,255,255,.22)" : "rgba(16,36,15,.14)")}
         <div style="min-width:0"><div class="lbl">${today ? "Seu dia" : dayLabel(k)}</div><div class="big">${msg}</div></div>
       </div>
       <div class="hero-chips"><span class="hchip">${IC.flame(14)} ${P.streak} ${P.streak === 1 ? "dia seguido" : "dias seguidos"}</span><span class="hchip">Nível ${P.lvl + 1}</span></div>
@@ -682,14 +734,22 @@ function renderHoje() {
     </div>
    </div>
    <div class="col">
+    <div class="card profile-panel desk">
+      <div class="row" style="gap:14px">${avatar("avatar lg")}<div class="stack" style="gap:3px;min-width:0"><b class="pp-name">${esc(p.name || "Você")}</b><span class="small muted">Nível ${P.lvl + 1} · ${P.name}</span></div><a class="pillbtn" href="#perfil" style="margin-left:auto">${IC.gear(15)} Ajustes</a></div>
+      <div class="pp-stats">
+        <a href="#meta"><span class="ic sleep">${IC.flame(18)}</span><b class="num">${P.streak}</b><small>dias seguidos</small></a>
+        <a href="#meta"><span class="ic amber">${IC.star(18)}</span><b class="num">${fmt(P.xp)}</b><small>pontos</small></a>
+        <a href="#meta"><span class="ic food">${IC.trophy(18)}</span><b class="num">${Object.keys(S.badges).length}</b><small>conquistas</small></a>
+      </div>
+    </div>
     <div class="card">
-      <div class="row between"><h2>Refeições</h2><a class="link small" href="#comida">Ver fichas</a></div>
+      <div class="row between"><h2>Refeições</h2><a class="pillbtn" href="#comida">Ver fichas ${IC.arrow(14)}</a></div>
       <div><div class="bar" style="height:8px"><span style="width:${Math.min(100, eat.kcal / T.kcal * 100)}%"></span></div>
         <div class="mline" style="margin:8px 0 0"><span class="small muted num">${eat.n} de ${plan.length} · ${fmt(eat.kcal)} de ${fmt(T.kcal)} kcal</span><span class="small muted num">${fmt(eat.prot)} de ${fmt(T.prot)} g proteína</span></div></div>
       <div>${plan.map(m => { const o = resolve(m, entryOf(d, m.id));
         return `<button class="meal ${o ? "on" : ""}" data-a="ficha" data-id="${m.id}"><span class="check">${IC.check(15)}</span>
           <span class="meal-body"><span class="n">${m.n}${currentMeal && currentMeal.id === m.id ? '<span class="tagnow">agora</span>' : ""}</span><span class="d" style="display:${o ? "block" : "none"}">${o ? `${esc(o.t)}${o.q !== 1 && !o.free ? ` (${o.q < 1 ? "metade" : "repeti"})` : ""} · ${o.kcal} kcal` : ""}</span></span>
-          <span class="t">${fromMin(m.min)}</span></button>`; }).join("")}</div>
+          <span class="t">${fromMin(m.min)}</span><span class="chev">›</span></button>`; }).join("")}</div>
     </div>
     ${today ? `<p class="tipline">${IC.spark()}<span>${esc(insight)}</span></p>` : ""}
    </div>
@@ -765,7 +825,7 @@ function renderSono() {
    </div>
    <div class="col">
     <div class="card">
-      <div class="row between"><h2>Rotina de hoje</h2><a class="link small" href="#perfil">Mudar horários</a></div>
+      <div class="row between"><h2>Rotina de hoje</h2><a class="pillbtn" href="#perfil">${IC.edit(14)} Mudar horários</a></div>
       <p class="small muted" style="margin-top:-6px">Toque em um horário para ver o que dizem os estudos.</p>
       <div class="timeline">${R.map((r, i) => `<div class="tl ${r.m <= now ? "past" : ""} ${i === nextIdx ? "nextup" : ""}"><span class="h">${fromMin(r.m)}</span><span class="rail"><b></b></span><details class="x" ${i === nextIdx ? "open" : ""}><summary><strong>${r.t}</strong></summary><span>${r.s}</span><span class="why">${esc(r.src)}</span></details></div>`).join("")}</div>
       ${!p.bedNow ? `<p class="small muted">Ainda não dorme às ${p.bed}? Informe em <a href="#perfil">Ajustes</a> a hora em que dorme hoje, e o app adianta 15 minutos a cada 2 dias.</p>` : ""}
@@ -818,7 +878,7 @@ function renderCompras() {
   <div class="card"><div class="row between"><h2>Para comprar</h2><span class="small muted">${todo.length} ${todo.length === 1 ? "item" : "itens"}</span></div>
     ${todo.length ? `<div>${todo.map(row).join("")}</div>` : `<p class="small muted">${done.length ? "Tudo comprado." : "Sua lista está vazia. Adicione itens acima ou monte a partir das fichas: o app puxa os ingredientes do que você marcou nos últimos 7 dias."}</p>`}
   </div>
-  ${done.length ? `<div class="card"><div class="row between"><h2>Já comprado</h2><button class="link small" data-a="shop-clear">Limpar comprados</button></div><div>${done.map(row).join("")}</div></div>` : ""}`;
+  ${done.length ? `<div class="card"><div class="row between"><h2>Já comprado</h2><button class="pillbtn" data-a="shop-clear">Limpar comprados</button></div><div>${done.map(row).join("")}</div></div>` : ""}`;
 }
 function renderComida() {
   const { T, plan } = ctx(), p = S.profile, d = getDay(), eat = eatenOn(curDay, plan), f = portion(T), I = goalInfo();
@@ -944,7 +1004,7 @@ function renderMeta() {
   <div class="cols">
    <div class="col">
     <div class="card">
-      <div class="row between"><h2>Seu peso</h2><button class="link small" data-a="goal">Editar meta</button></div>
+      <div class="row between"><h2>Seu peso</h2><button class="pillbtn" data-a="goal">${IC.edit(14)} Editar meta</button></div>
       ${g.type === "manter" ? `<div class="row" style="gap:10px;align-items:baseline"><span class="score num" style="color:var(--amber)">${fmt(I.cur, 1)}</span><span class="muted">kg · manter</span></div>` : `
       <div class="goal-hero"><div><div class="k">${fmt(I.cur, 1)}<small> kg</small></div><div class="small muted">agora</div></div>
         <div class="arrow">${IC.arrow(20)}</div><div><div class="k" style="color:var(--amber)">${fmt(g.target, 1)}<small> kg</small></div><div class="small muted">meta</div></div></div>
@@ -1000,7 +1060,8 @@ function setWeight(kg, k) { k = k || todayKey(); S.weights[k] = { kg: +kg.toFixe
 function renderPerfil() {
   const p = S.profile, T = ctx().T, I = goalInfo(), g = S.goal;
   const name = p.name || (uid ? userEmail.split("@")[0] : "Sem conta");
-  const who = `<div class="row" style="gap:14px"><span class="avatar">${esc((name[0] || "?").toUpperCase())}</span><div class="stack" style="gap:2px"><b style="font-size:16px">${esc(name)}</b><span class="small muted">${uid ? esc(userEmail) : "Dados só neste aparelho"}</span></div></div>`;
+  const who = `<div class="row" style="gap:14px">${avatar("avatar lg")}<div class="stack" style="gap:6px;min-width:0"><b style="font-size:17px">${esc(name)}</b><span class="small muted">${uid ? esc(userEmail) : "Dados só neste aparelho"}</span>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><label class="pillbtn" for="photo-in">${IC.edit(14)} ${p.photo ? "Trocar foto" : "Colocar foto"}</label><input id="photo-in" type="file" accept="image/*" hidden>${p.photo ? `<button class="pillbtn" data-a="photo-rm">Remover</button>` : ""}</div></div></div>`;
   const acct = !HAS_CLOUD ? `${who}<p class="small muted">A sincronização ainda não foi configurada neste app.</p>`
     : uid ? `${who}<div class="setrow"><span>Sincronização</span><span class="small muted">${SYNC_TXT[syncState][1]}</span></div>
        <div class="row" style="gap:8px"><button class="btn sm ghost" style="flex:1" data-a="syncnow">Sincronizar agora</button><button class="btn sm ghost" style="flex:1" data-a="signout">Sair da conta</button></div>`
@@ -1099,8 +1160,8 @@ function fichaSheet(id) {
       <div class="card flat" style="padding:14px"><h3>Comi outra coisa</h3>
         <div class="field"><label for="fr-t">O que você comeu</label><input id="fr-t" placeholder="Ex.: 2 tapiocas com queijo e café" maxlength="80" value="${esc(free.t || "")}"></div>
         <div class="field"><span class="lab">Quanto</span><div class="seg">${[[0.6, "Pouco"], [1, "Normal"], [1.4, "Bastante"]].map(([q, l]) => `<button type="button" class="${free.q === q ? "on" : ""}" data-fq="${q}">${l}</button>`).join("")}</div></div>
-        <div class="grid2"><div class="field"><label for="fr-k">Calorias (se souber)</label><input id="fr-k" type="number" inputmode="numeric" placeholder="≈ ${Math.round(m.avg * free.q)}" value="${free.k || ""}"></div>
-          <div class="field"><label for="fr-p">Proteína em g (se souber)</label><input id="fr-p" type="number" inputmode="numeric" placeholder="≈ ${Math.round(m.avgP * free.q)}" value="${free.p || ""}"></div></div>
+        <div class="grid2"><div class="field"><label for="fr-k">Calorias (se souber)</label><input id="fr-k" type="number" inputmode="numeric" placeholder="Vazio = ≈ ${Math.round(m.avg * free.q)}" value="${free.k || ""}"></div>
+          <div class="field"><label for="fr-p">Proteína em g (se souber)</label><input id="fr-p" type="number" inputmode="numeric" placeholder="Vazio = ≈ ${Math.round(m.avgP * free.q)}" value="${free.p || ""}"></div></div>
         <button type="button" class="toggle ${free.save ? "on" : ""}" data-fsave="1" aria-pressed="${free.save}"><span><b>Guardar como minha ficha</b><br><span class="small muted">Aparece como opção nesta refeição nos próximos dias</span></span><span class="sw"></span></button>
         <button class="btn food block" data-freg="1">Registrar</button></div>
       ${mine.length ? `<div class="field"><span class="lab">Minhas fichas (toque para remover)</span><div class="chips">${mine.map(o => `<button type="button" data-rm="${o.cid}">${esc(o.t)} ×</button>`).join("")}</div></div>` : ""}
@@ -1290,7 +1351,7 @@ function celebrate() {
 let userEmail = "", gateMode = "in", gateMsg = "", gateBusy = false, view = "app";
 function renderGate() {
   return `<div class="gate"><div class="box">
-    ${mascot("happy", 120, "#C4F26A", true)}
+    <div class="gate-scene">${scene(period())}${mascot("happy", 120, null, true)}</div>
     <div class="stack" style="gap:6px"><h1>Sempre Saudáveis</h1><p class="muted">Sono, fichas de alimentação e meta de peso. Entre para sincronizar celular e computador.</p></div>
     <form class="card" id="auth">
       <div class="seg" data-seg="mode"><button type="button" class="${gateMode === "in" ? "on" : ""}" data-v="in">Entrar</button><button type="button" class="${gateMode === "up" ? "on" : ""}" data-v="up">Criar conta</button></div>
@@ -1342,6 +1403,7 @@ document.addEventListener("click", e => {
   }
   else if (a === "mealedit") mealEditSheet(b.dataset.id);
   else if (a === "quick") quickSheet();
+  else if (a === "photo-rm") { delete S.profile.photo; S.profile.u = Date.now(); commit(); render(); toast("Foto removida."); }
   else if (a === "totop") window.scrollTo({ top: 0, behavior: "smooth" });
   else if (a === "autotimes") { S.profile.mealTimes = {}; S.profile.u = Date.now(); commit(); render(); toast("Horários automáticos de volta."); }
   else if (a === "shop-toggle") { const x = S.shop[b.dataset.id]; if (x) { x.done = x.done ? 0 : 1; x.u = Date.now(); commit(); render(); } }
