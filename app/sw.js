@@ -1,9 +1,9 @@
 // Sempre Saudáveis — funciona offline. Mude VERSION a cada publicação para atualizar os aparelhos.
-const VERSION = "ss-v7";
+const VERSION = "ss-v8";
 const SHELL = [
   "./", "./index.html", "./app.js", "./config.js", "./vendor/supabase.js", "./manifest.webmanifest",
   "../icons/icon-192.png", "../icons/icon-512.png", "../icons/apple-touch-icon.png", "../icons/favicon.png",
-  "../fonts/newyork-500.woff2", "../fonts/newyork-600.woff2", "../fonts/newyork-700.woff2",
+  "../fonts/intertight-500.woff2", "../fonts/intertight-600.woff2", "../fonts/intertight-700.woff2",
   "../fonts/touche-400.woff2", "../fonts/touche-500.woff2", "../fonts/touche-600.woff2", "../fonts/touche-700.woff2"
 ];
 

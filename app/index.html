@@ -386,14 +386,14 @@ details .stack{margin-top:10px;font-size:13.5px;color:var(--muted)}
 }
 
 /* ===== v2: New York nos títulos, Touche nos textos; cartões planos, mais respiro ===== */
-@font-face{font-family:"New York";src:url("../fonts/newyork-500.woff2") format("woff2");font-weight:500;font-display:swap}
-@font-face{font-family:"New York";src:url("../fonts/newyork-600.woff2") format("woff2");font-weight:600;font-display:swap}
-@font-face{font-family:"New York";src:url("../fonts/newyork-700.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Inter Tight";src:url("../fonts/intertight-500.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Inter Tight";src:url("../fonts/intertight-600.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Inter Tight";src:url("../fonts/intertight-700.woff2") format("woff2");font-weight:700;font-display:swap}
 @font-face{font-family:"Touche";src:url("../fonts/touche-400.woff2") format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"Touche";src:url("../fonts/touche-500.woff2") format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Touche";src:url("../fonts/touche-600.woff2") format("woff2");font-weight:600;font-display:swap}
 @font-face{font-family:"Touche";src:url("../fonts/touche-700.woff2") format("woff2");font-weight:700;font-display:swap}
-:root{--f-display:"New York",ui-serif,"Iowan Old Style",Georgia,serif;--f-body:"Touche",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--r:22px}
+:root{--f-display:"Inter Tight","Helvetica Neue",Helvetica,Arial,sans-serif;--f-body:"Touche",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;--r:22px}
 body{font-size:15.5px;line-height:1.5}
 h1{font-size:32px;font-weight:600;letter-spacing:-.015em;line-height:1.1}
 h2{font-size:21px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
@@ -831,6 +831,21 @@ body{background-image:none!important;background-color:var(--bg)}
 .pp-name{white-space:normal!important;text-align:center}
 .pp-stats a{padding:12px 4px}
 .pp-stats small{text-align:center;line-height:1.2}
+
+/* ===== v7: títulos sem serifa, tema só em Ajustes, escolhas claras ===== */
+h1{font-weight:700;letter-spacing:-.035em}
+h2{font-weight:650;letter-spacing:-.02em}
+.wshead > b,.pp-name,.hero .big,.pet-name{letter-spacing:-.02em;font-weight:650}
+.hero .big{font-weight:650}
+.themeseg{display:none!important}
+/* números com − e +: uma caixa só */
+.field .nstep input:not([type=hidden]):not([type=checkbox]){background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0}
+.nstep{border-radius:14px}
+.nstep button{flex-basis:42px;color:var(--fg);font-size:22px}
+/* escolha selecionada bem visível */
+.seg button.on{background:var(--fg);color:var(--bg);box-shadow:none}
+.seg button:not(.on){color:var(--muted)}
+.themeseg button.on{background:var(--surface)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
