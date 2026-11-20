@@ -1,0 +1,86 @@
+# Gera os instaladores do Sempre Saudáveis (Mac, Windows e Android) e publica numa Release.
+# Roda quando uma tag v* é enviada (ex.: git tag v1.0.1 && git push --tags) ou manualmente na aba Actions.
+name: Instaladores
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    defaults: { run: { working-directory: desktop } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-audit --no-fund
+      - run: npx electron-builder --mac --arm64 --x64
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: "false" }
+      - uses: actions/upload-artifact@v4
+        with: { name: mac, path: desktop/dist/*.dmg, if-no-files-found: error }
+
+  windows:
+    runs-on: windows-latest
+    defaults: { run: { working-directory: desktop } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --no-audit --no-fund
+      - run: npx electron-builder --win --x64
+      - uses: actions/upload-artifact@v4
+        with: { name: windows, path: desktop/dist/*.exe, if-no-files-found: error }
+
+  android:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - run: npm install --no-audit --no-fund
+      - run: npx cap add android
+      - name: Ícone e tela de abertura do Sempre Saudáveis
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick >/dev/null
+          RES=android/app/src/main/res
+          rm -rf $RES/mipmap-anydpi-v26
+          for pair in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            d=${pair%%:*}; s=${pair##*:}
+            for f in ic_launcher ic_launcher_round; do convert icon.png -resize ${s}x${s} $RES/mipmap-$d/$f.png; done
+            rm -f $RES/mipmap-$d/ic_launcher_foreground.png
+          done
+          for f in $(find $RES -name splash.png); do
+            dims=$(identify -format "%wx%h" "$f"); w=${dims%x*}; h=${dims#*x}; m=$(( w < h ? w : h )); i=$(( m * 2 / 5 ))
+            convert -size $dims xc:"#F2F4EE" \( icon.png -resize ${i}x${i} \) -gravity center -composite "$f"
+          done
+      - run: npx cap sync android
+      - run: ./gradlew assembleDebug --no-daemon -q
+        working-directory: mobile/android
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk SempreSaudaveis-android.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: android, path: mobile/SempreSaudaveis-android.apk, if-no-files-found: error }
+
+  release:
+    needs: [mac, windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: out, merge-multiple: true }
+      - name: Publicar na Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
+        run: |
+          ls -la out
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --title "Sempre Saudáveis $TAG" \
+              --notes "Instaladores do Sempre Saudáveis. Veja como instalar em https://joaotenoli.github.io/sempre-saudaveis/#baixar"
+          gh release upload "$TAG" out/* -R "$GITHUB_REPOSITORY" --clobber
