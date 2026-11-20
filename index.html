@@ -8,12 +8,16 @@
 <meta name="theme-color" content="#C4F26A">
 <link rel="icon" type="image/png" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap">
 <style>
+@font-face{font-family:"New York";src:url("fonts/newyork-500.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"New York";src:url("fonts/newyork-600.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"New York";src:url("fonts/newyork-700.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Touche";src:url("fonts/touche-400.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Touche";src:url("fonts/touche-500.woff2") format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Touche";src:url("fonts/touche-600.woff2") format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Touche";src:url("fonts/touche-700.woff2") format("woff2");font-weight:700;font-display:swap}
 :root{--bg:#F2F4EE;--surface:#fff;--surface2:#E9EDE3;--fg:#131A14;--muted:#5F6B60;--line:#DCE2D6;--lime:#C4F26A;--lime2:#A2DE48;--ink:#10240F;--food:#1F7A3F;--sleep:#6A5CE6;--sleep-soft:#E9E6FD;
-  --shadow:0 1px 2px rgba(20,30,20,.04),0 10px 30px rgba(20,30,20,.07);--fd:"Sora",system-ui,sans-serif;--fb:"Inter",system-ui,sans-serif;color-scheme:light}
+  --shadow:0 1px 2px rgba(20,30,20,.04),0 10px 30px rgba(20,30,20,.07);--fd:"New York",ui-serif,Georgia,serif;--fb:"Touche",ui-sans-serif,system-ui,sans-serif;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#0C0F0B;--surface:#161A14;--surface2:#1F251C;--fg:#EEF2EA;--muted:#98A396;--line:#2A3226;--food:#9BE25A;--sleep:#A397FF;--sleep-soft:#27224F;--shadow:0 10px 30px rgba(0,0,0,.3);color-scheme:dark}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--fb);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
@@ -51,12 +55,12 @@ nav{display:flex;justify-content:space-between;align-items:center;padding-block:
 section{padding-block:44px}
 .eyebrow{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .sec-h{display:flex;flex-direction:column;gap:8px;margin-bottom:22px}
-.sec-h h2{font-size:28px}
+.sec-h h2{font-size:32px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .plat{background:var(--surface);border-radius:22px;padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px;border:2px solid transparent;min-width:0}
 .plat.you{border-color:var(--lime2)}
 .plat .head{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.plat h3{font-size:19px;display:flex;align-items:center;gap:10px}
+.plat h3{font-size:21px;display:flex;align-items:center;gap:10px}
 .plat h3 svg{color:var(--food)}
 .tag{font-size:12px;font-weight:600;background:var(--lime);color:var(--ink);padding:4px 10px;border-radius:20px;white-space:nowrap}
 ol{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:10px}
@@ -102,7 +106,7 @@ footer{padding-block:28px 48px;color:var(--muted);font-size:13.5px}
     </div>
     <div class="phone" aria-hidden="true"><div class="screen">
       <div class="hi">Bom dia, João</div>
-      <div class="hcard"><svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="17" fill="none" stroke="rgba(16,36,15,.15)" stroke-width="5"/><circle cx="22" cy="22" r="17" fill="none" stroke="#10240F" stroke-width="5" stroke-linecap="round" stroke-dasharray="107" stroke-dashoffset="30" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" font-size="12" font-weight="700" fill="#10240F" font-family="Sora,sans-serif">72</text></svg><b>Dia forte.<br>Falta pouco.</b>
+      <div class="hcard"><svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="17" fill="none" stroke="rgba(16,36,15,.15)" stroke-width="5"/><circle cx="22" cy="22" r="17" fill="none" stroke="#10240F" stroke-width="5" stroke-linecap="round" stroke-dasharray="107" stroke-dashoffset="30" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" font-size="12" font-weight="700" fill="#10240F" style="font-family:var(--fd)">72</text></svg><b>Dia forte.<br>Falta pouco.</b>
         <svg class="bob" style="position:absolute;right:-2px;bottom:-8px" width="52" height="48" viewBox="0 0 120 110"><path d="M60 36c-2-12 2-20 12-25 3 10 0 19-12 25z" fill="#2E8B47"/><path d="M60 36c0-11-5-18-15-21-2 10 2 18 15 21z" fill="#3FA65A"/><path d="M8 110C8 62 34 34 60 34s52 28 52 76z" fill="#F6FFE3"/><path d="M40 71q7 -8 14 0M66 71q7 -8 14 0M51 80q9 9 18 0" stroke="#10240F" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg></div>
       <div class="card"><b>Sua noite · 8h10</b><div class="line"><i style="width:86%;background:#6A5CE6"></i></div></div>
       <div class="card"><b>Fichas de hoje</b>

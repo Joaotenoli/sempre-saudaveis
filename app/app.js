@@ -432,9 +432,11 @@ const IC = {
   trophy: s => svg('<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.500a3.500 3.500 0 0 0 3.500 4M16 6h3.500a3.500 3.500 0 0 1-3.500 4M12 13v4M8.500 20h7M10 17h4"/>', s),
   check: s => `<svg width="${s || 15}" height="${s || 15}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.200" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.500 4.500 4.500L19 7.500"/></svg>`,
   spark: () => '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.200 6.600L21 11l-6.800 2.400L12 20l-2.200-6.600L3 11l6.800-2.400z"/></svg>',
+  gear: s => svg('<circle cx="12" cy="12" r="3"/><path d="M19.400 13a7.500 7.500 0 0 0 0-2l2-1.500-2-3.400-2.300 1a7.500 7.500 0 0 0-1.700-1L15 3.500h-4l-.400 2.600a7.500 7.500 0 0 0-1.700 1l-2.300-1-2 3.400L6.600 11a7.500 7.500 0 0 0 0 2l-2 1.500 2 3.400 2.300-1a7.500 7.500 0 0 0 1.700 1l.400 2.600h4l.400-2.600a7.500 7.500 0 0 0 1.700-1l2.300 1 2-3.400z"/>', s),
+  auto: s => svg('<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/>', s),
   arrow: s => svg('<path d="M5 12h14M13 6l6 6-6 6"/>', s || 18)
 };
-const TABS = [["hoje", "Hoje", "home"], ["sono", "Sono", "moon"], ["comida", "Comida", "bowl"], ["meta", "Meta", "target"], ["perfil", "Perfil", "user"]];
+const TABS = [["hoje", "Hoje", "home"], ["sono", "Sono", "moon"], ["comida", "Comida", "bowl"], ["meta", "Meta", "target"], ["perfil", "Ajustes", "gear"]];
 
 /* ================= mascote: Broto ================= */
 function mascot(mood, size, body, live) {
@@ -447,7 +449,7 @@ function mascot(mood, size, body, live) {
     : mood === "wow" ? `<path d="M52 80q8 11 16 0z" fill="${ink}"/>`
     : mood === "calm" ? `<path d="M54 82q6 4 12 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`
     : `<path d="M51 80q9 9 18 0" stroke="${ink}" stroke-width="3.500" fill="none" stroke-linecap="round"/>`;
-  const extra = mood === "sleep" ? `<text x="92" y="38" font-family="Sora,sans-serif" font-size="15" font-weight="700" fill="${ink}" opacity=".55">z</text><text x="102" y="26" font-family="Sora,sans-serif" font-size="11" font-weight="700" fill="${ink}" opacity=".4">z</text>`
+  const extra = mood === "sleep" ? `<text x="92" y="38" style="font-family:var(--f-display)" font-size="15" font-weight="700" fill="${ink}" opacity=".55">z</text><text x="102" y="26" style="font-family:var(--f-display)" font-size="11" font-weight="700" fill="${ink}" opacity=".4">z</text>`
     : mood === "wow" ? `<path d="M98 34l2.500 6 6 2.500-6 2.500-2.500 6-2.500-6-6-2.500 6-2.500z" fill="#fff"/><path d="M18 44l1.600 4 4 1.600-4 1.600-1.600 4-1.600-4-4-1.600 4-1.600z" fill="#fff"/>` : "";
   return `<svg class="mascot ${live ? "live" : ""}" width="${size}" height="${size * 0.92}" viewBox="0 0 120 110" aria-hidden="true">
     <path d="M60 36c-2-12 2-20 12-25 3 10 0 19-12 25z" fill="#2E8B47"/><path d="M60 36c0-11-5-18-15-21-2 10 2 18 15 21z" fill="#3FA65A"/>
@@ -467,15 +469,23 @@ let scrollTo = null;
 window.addEventListener("hashchange", () => { const t = location.hash.slice(1); if (TABS.some(x => x[0] === t) && t !== tab) { tab = t; render(); if (!scrollTo) window.scrollTo(0, 0); } });
 function go(t, anchor) { scrollTo = anchor || null; if (tab === t) { render(); } else location.hash = t; }
 
-function renderTabs() { $("#tabs").innerHTML = TABS.map(([id, l, ic]) => `<a href="#${id}" data-t="${id}" class="${tab === id ? "on" : ""}" ${tab === id ? 'aria-current="page"' : ""}>${IC[ic](22)}<span>${l}</span></a>`).join(""); }
+function renderTabs() {
+  $("#tabs").innerHTML = TABS.map(([id, l, ic]) => `<a href="#${id}" data-t="${id}" class="${tab === id ? "on" : ""}" ${tab === id ? 'aria-current="page"' : ""}>${IC[ic](22)}<span>${l}</span></a>`).join("");
+  const foot = $("#sidefoot"); if (!foot) return;
+  const name = S.profile.name || (uid ? userEmail.split("@")[0] : "Sem conta");
+  foot.innerHTML = `<div class="seg themeseg" data-seg="theme" aria-label="Aparência">${[["auto", "auto", "Automático"], ["light", "sun", "Claro"], ["dark", "moon", "Escuro"]].map(([v, ic, l]) => `<button type="button" class="${themePref() === v ? "on" : ""}" data-v="${v}" title="${l}" aria-label="${l}">${IC[ic](17)}</button>`).join("")}</div>
+    <a class="acct" href="#perfil"><span class="av">${esc((name[0] || "?").toUpperCase())}</span><span class="at"><b>${esc(name)}</b><small id="sync2"></small></span></a>`;
+}
+const SYNC_TXT = { local: ["", "Só neste aparelho"], ok: ["ok", "Sincronizado"], busy: ["busy", "Sincronizando"], off: ["off", "Offline · salvo aqui"] };
 function renderSync() {
-  const el = $("#sync"); if (!el) return;
-  const map = { local: ["", "Só neste aparelho"], ok: ["ok", "Sincronizado"], busy: ["busy", "Sincronizando"], off: ["off", "Offline · salvo aqui"] };
-  const [c, t] = map[syncState]; el.className = "sync " + c; el.title = t; el.setAttribute("aria-label", t); el.innerHTML = `<i></i><span>${t}</span>`;
+  const [c, t] = SYNC_TXT[syncState];
+  const el = $("#sync"); if (el) { el.className = "me " + c; el.title = t; el.setAttribute("aria-label", "Ajustes · " + t); }
+  const s2 = $("#sync2"); if (s2) { s2.textContent = t; s2.className = c; }
 }
 function header(title, sub) {
   const date = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
-  return `<header class="top"><div class="stack" style="gap:4px"><span class="sub">${sub || date}</span><h1>${title}</h1></div><button id="sync" class="sync" data-a="go" data-t="perfil" aria-label="Estado da sincronização"></button></header>`;
+  const ini = ((S.profile.name || userEmail || "?")[0] || "?").toUpperCase();
+  return `<header class="top"><div class="stack" style="gap:6px"><span class="sub">${sub || date}</span><h1>${title}</h1></div><button id="sync" class="me" data-a="go" data-t="perfil">${esc(ini)}</button></header>`;
 }
 function ring(pct, size, color, inner, track) {
   const sw = Math.round(size / 11), r = size / 2 - sw / 2 - 1, c = 2 * Math.PI * r, off = c * (1 - clamp(pct, 0, 1));
@@ -492,73 +502,50 @@ function renderHoje() {
   const name = p.name ? `, ${esc(p.name.split(" ")[0])}` : "";
   const score = P.scores[k] ?? dayScore(k);
   const eat = eatenOn(k, plan), H = habitList(), e = sleepOf(k);
+  const msg = score >= 85 ? "Dia redondo. Bom trabalho." : score >= 60 ? "Dia forte. Falta pouco." : score >= 30 ? "Bom começo. Siga daí." : hour < 12 ? "Comece pela noite e pelo café." : "Ainda dá tempo de salvar o dia.";
 
-  const msg = score >= 85 ? "Dia redondo. Bom trabalho." : score >= 60 ? "Dia forte. Falta pouco para fechar." : score >= 30 ? "Bom começo. Continue de onde parou." : hour < 12 ? "Comece pela noite e pelo café." : "Ainda dá tempo de salvar o dia.";
-  const events = [...routine().map(r => ({ ...r, kind: "sleep" })), ...plan.map(m => ({ m: m.min, t: m.n, s: d.meals[m.id] != null ? "Já registrado" : "Escolha uma ficha ou anote o que comeu", kind: "food", id: m.id }))].sort((a, b) => a.m - b.m);
+  const events = [...routine().map(r => ({ ...r, kind: "sleep" })), ...plan.map(m => ({ m: m.min, t: m.n, kind: "food", id: m.id }))].sort((a, b) => a.m - b.m);
   const nx = events.find(ev => ev.m > now && !(ev.kind === "food" && d.meals[ev.id] != null)) || { ...events[0], m: events[0].m + 1440 };
   const currentMeal = [...plan].reverse().find(m => m.min <= now + 30 && d.meals[m.id] == null);
 
-  const sleepCard = e ? (() => { const sc = sleepScore(e);
-    return `<div class="card"><div class="row between"><span class="eyebrow">Sua noite</span><button class="link small" data-a="sleep">Editar</button></div>
-      <div class="row" style="gap:16px"><div class="score num">${sc}</div><div class="stack" style="gap:5px"><div class="row wrap" style="gap:8px"><b class="num">${durLong(sleepDur(e))}</b><span class="pill ${sc >= 80 ? "good" : sc >= 60 ? "warn" : "bad"}">${sc >= 80 ? "Noite boa" : sc >= 60 ? "Noite ok" : "Noite fraca"}</span></div>
-      <span class="small muted num">${e.bed} → ${e.wake} · ${e.wakes ? e.wakes + " despertar" + (e.wakes > 1 ? "es" : "") : "sem despertar"}${e.head ? " · dor de cabeça" : ""}</span></div></div></div>`; })()
-    : `<div class="card"><span class="eyebrow">Sua noite</span><h2>Como você dormiu?</h2><p class="muted small">Dez segundos. Os horários já vêm preenchidos.</p><button class="btn sleep block" data-a="sleep">${IC.moon(20)} Registrar a noite</button></div>`;
-
+  const sc = e ? sleepScore(e) : 0;
+  const sleepRow = e
+    ? `<button class="rowcard" data-a="sleep"><span class="ric sleep">${IC.moon(20)}</span><span class="rbody"><b>${durLong(sleepDur(e))} de sono</b><small class="num">${e.bed} → ${e.wake}${e.wakes ? ` · ${e.wakes} despertar${e.wakes > 1 ? "es" : ""}` : ""}</small></span><span class="pill ${sc >= 80 ? "good" : sc >= 60 ? "warn" : "bad"}">${sc} pts</span></button>`
+    : `<button class="rowcard cta" data-a="sleep"><span class="ric sleep">${IC.moon(20)}</span><span class="rbody"><b>Como você dormiu?</b><small>Registre a noite em 10 segundos</small></span><span class="chev">›</span></button>`;
+  const nextRow = `<${nx.kind === "food" ? `button data-a="ficha" data-id="${nx.id}"` : "div"} class="rowcard"><span class="ric ${nx.kind === "food" ? "food" : "sleep"}">${nx.kind === "food" ? IC.bowl(20) : IC.sun(20)}</span><span class="rbody"><small>Próximo · em ${durLong(nx.m - now)}</small><b>${esc(nx.t)}</b></span><span class="clock num">${fromMin(nx.m)}</span></${nx.kind === "food" ? "button" : "div"}>`;
   const ins = insights(), insight = ins[hash(k) % ins.length];
-  const I = goalInfo();
 
   return `${header(`${hi}${name}`)}
   <div class="cols">
    <div class="col">
     <section class="hero">
-      ${mascot(moodNow(score), 92, null, true)}
+      ${mascot(moodNow(score), 96, null, true)}
       <div class="hero-top">
-        ${ring(score / 100, 104, "#10240F", `<text x="52" y="56" text-anchor="middle" font-family="Sora,sans-serif" font-size="29" font-weight="600">${score}</text><text x="52" y="73" text-anchor="middle" font-size="10.500" opacity=".7">de 100</text>`, "rgba(16,36,15,.14)")}
-        <div style="min-width:0"><div class="lbl">Pontos de hoje</div><div class="big">${msg}</div><div class="meta">${eat.n}/${plan.length} fichas · ${e ? "noite registrada" : "noite por registrar"}</div></div>
+        ${ring(score / 100, 96, "#10240F", `<text x="48" y="53" text-anchor="middle" style="font-family:var(--f-display)" font-size="30" font-weight="600">${score}</text><text x="48" y="69" text-anchor="middle" font-size="10" opacity=".7">de 100</text>`, "rgba(16,36,15,.14)")}
+        <div style="min-width:0"><div class="lbl">Seu dia</div><div class="big">${msg}</div></div>
       </div>
-      <div class="hero-foot">
-        <div class="hero-chips">
-          <span class="hchip">${IC.flame(14)} ${P.streak} ${P.streak === 1 ? "dia seguido" : "dias seguidos"}</span>
-          ${S.goal.type !== "manter" ? `<span class="hchip">${IC.target(14)} Meta ${Math.round(I.pct * 100)}%</span>` : ""}
-        </div>
-        <div class="xp"><div class="row between"><span>Nível ${P.lvl + 1} · ${P.name}</span><span class="num">${P.nxt ? `${fmt(P.xp)}/${fmt(P.nxt)}` : fmt(P.xp)}</span></div><div class="bar"><span style="width:${Math.max(3, P.pct * 100)}%"></span></div></div>
-      </div>
+      <div class="hero-chips"><span class="hchip">${IC.flame(14)} ${P.streak} ${P.streak === 1 ? "dia seguido" : "dias seguidos"}</span><span class="hchip">Nível ${P.lvl + 1}</span></div>
     </section>
-    <div class="next ${nx.kind === "food" ? "food" : ""}">
-      <div class="row" style="gap:13px"><span class="ic">${nx.kind === "food" ? IC.bowl(22) : IC.moon(22)}</span>
-      <div style="min-width:0"><div class="eyebrow">Próximo · em ${durLong(nx.m - now)}</div><div class="when">${esc(nx.t)}</div><div class="small muted">${esc(nx.s)}</div></div></div>
-      <div class="clock">${fromMin(nx.m)}</div>
-    </div>
-    ${sleepCard}
-    <div class="card"><div class="row between"><span class="eyebrow">Hábitos do dia</span><span class="small muted">${H.filter(h => d.habits[h.id]).length}/${H.length}</span></div>
-      <div class="habits" style="grid-template-columns:repeat(${Math.min(H.length, 4)},minmax(0,1fr))">${H.map(h => `<button class="habit ${d.habits[h.id] ? "on" : ""}" data-a="habit" data-id="${h.id}" aria-pressed="${!!d.habits[h.id]}"><span class="hi">${d.habits[h.id] ? IC.check(16) : IC[h.ic](18)}</span>${esc(h.n)}</button>`).join("")}</div>
+    ${sleepRow}
+    ${nextRow}
+    <div class="card">
+      <div class="qrow"><span class="ql"><b>Água</b><small class="num">${d.water} de ${T.water} copos</small></span><div class="mini"><button data-a="water" data-d="-1" aria-label="Menos um copo">−</button><button class="plus" data-a="water" data-d="1" aria-label="Mais um copo">+</button></div></div>
+      <div class="qrow"><span class="ql"><b>Intestino</b><small class="num">${d.gut} ${d.gut === 1 ? "vez" : "vezes"} hoje</small></span><div class="mini"><button data-a="gut" data-d="-1" aria-label="Menos uma">−</button><button class="plus" data-a="gut" data-d="1" aria-label="Mais uma">+</button></div></div>
+      <div class="qrow col"><span class="ql"><b>Hábitos</b><small>${H.filter(h => d.habits[h.id]).length} de ${H.length} hoje</small></span>
+        <div class="hpills">${H.map(h => `<button class="hpill ${d.habits[h.id] ? "on" : ""}" data-a="habit" data-id="${h.id}" aria-pressed="${!!d.habits[h.id]}">${d.habits[h.id] ? IC.check(14) : IC[h.ic](15)}${esc(h.n)}</button>`).join("")}</div></div>
     </div>
    </div>
    <div class="col">
     <div class="card">
-      <div class="row between"><span class="eyebrow">Fichas de hoje</span><a class="link small" href="#comida">Ver todas</a></div>
-      <div class="row" style="gap:16px">
-        ${ring(eat.kcal / T.kcal, 92, "var(--food)", `<text x="46" y="45" text-anchor="middle" font-family="Sora,sans-serif" font-size="19" font-weight="600" fill="var(--fg)">${Math.round(eat.kcal / T.kcal * 100)}%</text><text x="46" y="61" text-anchor="middle" font-size="10" fill="var(--muted)">kcal</text>`)}
-        <div class="stack" style="flex:1;gap:10px">
-          <div><div class="mline"><span>Calorias</span><span class="num muted">${fmt(eat.kcal)} / ${fmt(T.kcal)}</span></div><div class="bar"><span style="width:${Math.min(100, eat.kcal / T.kcal * 100)}%"></span></div></div>
-          <div><div class="mline"><span>Proteína</span><span class="num muted">${fmt(eat.prot)} / ${fmt(T.prot)} g</span></div><div class="bar"><span style="width:${Math.min(100, eat.prot / T.prot * 100)}%"></span></div></div>
-        </div>
-      </div>
+      <div class="row between"><h2>Refeições</h2><span class="small muted num">${eat.n} de ${plan.length}</span></div>
+      <div><div class="bar" style="height:8px"><span style="width:${Math.min(100, eat.kcal / T.kcal * 100)}%"></span></div>
+        <div class="mline" style="margin:8px 0 0"><span class="small muted num">${fmt(eat.kcal)} de ${fmt(T.kcal)} kcal</span><span class="small muted num">${fmt(eat.prot)} de ${fmt(T.prot)} g proteína</span></div></div>
       <div>${plan.map(m => { const o = resolve(m, entryOf(d, m.id));
         return `<button class="meal ${o ? "on" : ""}" data-a="ficha" data-id="${m.id}"><span class="check">${IC.check(15)}</span>
-          <span class="meal-body"><span class="n">${m.n}${currentMeal && currentMeal.id === m.id ? '<span class="tagnow">agora</span>' : ""}</span>
-          <span class="d" style="display:block">${o ? `${esc(o.t)}${o.q !== 1 && !o.free ? ` (${o.q < 1 ? "metade" : "repeti"})` : ""} · ${o.kcal} kcal · ${o.prot} g prot.` : "Toque para escolher uma ficha ou anotar o que comeu"}</span></span>
+          <span class="meal-body"><span class="n">${m.n}${currentMeal && currentMeal.id === m.id ? '<span class="tagnow">agora</span>' : ""}</span><span class="d" style="display:${o ? "block" : "none"}">${o ? `${esc(o.t)}${o.q !== 1 && !o.free ? ` (${o.q < 1 ? "metade" : "repeti"})` : ""} · ${o.kcal} kcal` : ""}</span></span>
           <span class="t">${fromMin(m.min)}</span></button>`; }).join("")}</div>
     </div>
-    <div class="counters">
-      <div class="counter"><span class="eyebrow">Água</span><div class="v num">${d.water}<small> / ${T.water} copos</small></div>
-        <div class="dots">${Array.from({ length: T.water }, (_, i) => `<i class="${i < d.water ? "on" : ""}"></i>`).join("")}</div>
-        <div class="stepper"><button data-a="water" data-d="-1" aria-label="Menos um copo">−</button><button class="plus" data-a="water" data-d="1" aria-label="Mais um copo">+</button></div></div>
-      <div class="counter food"><span class="eyebrow">Intestino</span><div class="v num">${d.gut}<small> ${d.gut === 1 ? "vez" : "vezes"} hoje</small></div>
-        <span class="small muted">Normal: de 3×/dia a 3×/semana</span>
-        <div class="stepper"><button data-a="gut" data-d="-1" aria-label="Menos uma">−</button><button class="plus" data-a="gut" data-d="1" aria-label="Mais uma">+</button></div></div>
-    </div>
-    <div class="insight"><span class="ic">${IC.spark()}</span><p>${esc(insight)}</p></div>
+    <p class="tipline">${IC.spark()}<span>${esc(insight)}</span></p>
    </div>
   </div>`;
 }
@@ -584,47 +571,43 @@ function sleepChart() {
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Horas de sono nas últimas 14 noites">${g}</svg></div>`;
 }
 function renderSono() {
-  const p = S.profile, now = nowMin();
+  const p = S.profile, now = nowMin(), E = effP();
   const n7 = lastNights(7).filter(x => x.e).map(x => x.e);
   const avg = n7.length ? n7.reduce((s, e) => s + sleepDur(e), 0) / n7.length : 0;
   const avgQ = n7.length ? n7.reduce((s, e) => s + (e.q || 0), 0) / n7.length : 0;
   const wakes = n7.length ? n7.reduce((s, e) => s + (e.wakes || 0), 0) / n7.length : 0;
   const head = n7.filter(e => e.head).length;
   const logs = Object.keys(S.sleep).filter(sleepOf).sort().reverse().slice(0, 12);
-  const E = effP();
-  const shift = E.left > 0 ? `<div class="card"><span class="eyebrow">Transição até ${E.targetBed}</span>
-      <div class="shift"><div><div class="tb">${E.bed}</div><div class="small muted">deitar hoje</div></div><div style="min-width:0"><b>Acordar às ${E.wake}</b><p class="small muted">15 minutos mais cedo a cada 2 dias. Faltam cerca de ${E.daysLeft} dias para chegar em ${E.targetBed}.</p></div></div>
-      <div class="bar" style="height:8px"><span style="width:${Math.max(4, (1 - E.left / E.total) * 100)}%;background:var(--sleep)"></span></div>
-      <p class="small muted">Mudar tudo de uma vez não funciona: o relógio biológico anda aos poucos. O que puxa ele é acordar no horário e pegar luz forte logo cedo.</p></div>`
-    : !p.bedNow ? `<div class="card flat"><p class="small muted">Ainda não dorme às ${p.bed}? Informe no <a href="#perfil">Perfil</a> a hora em que você dorme hoje, e o app monta a transição: 15 minutos mais cedo a cada 2 dias.</p></div>` : "";
+  const R = routine(), nextIdx = R.findIndex(r => r.m > now);
+  const shift = E.left > 0 ? `<div class="card"><div class="row between"><span class="eyebrow">Transição até ${E.targetBed}</span><span class="small muted">faltam ~${E.daysLeft} dias</span></div>
+      <div class="shift"><div><div class="tb">${E.bed}</div><div class="small muted">deitar hoje</div></div><div style="min-width:0"><b>Acordar às ${E.wake}</b><p class="small muted">15 minutos mais cedo a cada 2 dias.</p></div></div>
+      <div class="bar" style="height:8px"><span style="width:${Math.max(4, (1 - E.left / E.total) * 100)}%;background:var(--sleep)"></span></div></div>` : "";
   return `${header("Sono", `Meta: deitar ${p.bed} · acordar ${p.wake}`)}
   <div class="cols">
    <div class="col">
     ${shift}
     <button class="btn sleep block" data-a="sleep">${IC.moon(20)} ${sleepOf(todayKey()) ? "Editar a noite de hoje" : "Registrar a noite de hoje"}</button>
     <div class="card">
-      <div class="row between"><span class="eyebrow">Últimos 7 dias</span><span class="small muted">${n7.length} de 7 noites</span></div>
-      <div class="stats">
-        <div class="stat"><div class="v num">${n7.length ? dur(avg) : "–"}</div><div class="l">média por noite</div></div>
-        <div class="stat"><div class="v num">${n7.length ? fmt(avgQ, 1) : "–"}<small>/5</small></div><div class="l">qualidade</div></div>
-        <div class="stat"><div class="v num">${n7.length ? fmt(wakes, 1) : "–"}</div><div class="l">despertares</div></div>
-      </div>
+      <div class="row between"><h2>Últimos 7 dias</h2><span class="small muted">${n7.length} de 7 noites</span></div>
+      ${n7.length ? `<div class="stats">
+        <div class="stat"><div class="v num">${dur(avg)}</div><div class="l">média por noite</div></div>
+        <div class="stat"><div class="v num">${fmt(avgQ, 1)}<small>/5</small></div><div class="l">qualidade</div></div>
+        <div class="stat"><div class="v num">${fmt(wakes, 1)}</div><div class="l">despertares</div></div>
+      </div>` : `<p class="small muted">Registre a primeira noite para ver sua média, a qualidade e os despertares.</p>`}
       ${sleepChart()}
-      <div class="legend"><span><i style="background:var(--sleep)"></i>7 h ou mais</span><span><i style="background:var(--sleep);opacity:.45"></i>menos de 7 h</span><span><i style="background:var(--danger);border-radius:50%"></i>dor de cabeça (${head})</span></div>
+      <div class="legend"><span><i style="background:var(--sleep)"></i>7 h ou mais</span><span><i style="background:var(--sleep);opacity:.45"></i>menos de 7 h</span>${head ? `<span><i style="background:var(--danger);border-radius:50%"></i>dor de cabeça (${head})</span>` : ""}</div>
     </div>
-    <div class="card"><h2>Histórico</h2>
-      ${logs.length ? `<div>${logs.map(k => { const e = sleepOf(k), d = parseKey(k), sc = sleepScore(e);
+    ${logs.length ? `<div class="card"><h2>Histórico</h2><div>${logs.map(k => { const e = sleepOf(k), d = parseKey(k), sc = sleepScore(e);
         return `<div class="log"><div class="dd"><b class="num">${d.getDate()}</b><span>${WD[d.getDay()]}</span></div>
           <div class="mid"><div class="row wrap" style="gap:8px"><b class="num">${durLong(sleepDur(e))}</b><span class="small muted num">${e.bed} → ${e.wake}</span></div>
           <div class="tags"><span class="pill ${sc >= 80 ? "good" : sc >= 60 ? "warn" : "bad"}">${sc} pts</span>${e.wakes ? `<span class="pill">${e.wakes} despertar${e.wakes > 1 ? "es" : ""}</span>` : ""}${e.head ? '<span class="pill bad">dor de cabeça</span>' : ""}${e.screen && e.screen !== "nao" ? '<span class="pill warn">tela na cama</span>' : ""}${(e.why || []).map(w => `<span class="pill">${esc(w)}</span>`).join("")}</div></div>
-          <button class="btn sm ghost" data-a="sleep" data-k="${k}">Editar</button></div>`; }).join("")}</div>`
-      : `<p class="muted small">Suas noites aparecem aqui. Com 4 noites, o app começa a mostrar padrões: o que te acorda, se a tela na cama pesa e se a dor de cabeça acompanha os despertares.</p>`}
-    </div>
+          <button class="btn sm ghost" data-a="sleep" data-k="${k}">Editar</button></div>`; }).join("")}</div></div>` : ""}
    </div>
    <div class="col">
     <div class="card">
-      <div class="row between"><h2>Sua rotina</h2><a class="link small" href="#perfil">Mudar horários</a></div>
-      <div class="timeline">${routine().map(r => `<div class="tl ${r.m <= now ? "past" : ""}"><span class="h">${fromMin(r.m)}</span><span class="rail"><b></b></span><div class="x"><strong>${r.t}</strong><span>${r.s}</span></div></div>`).join("")}</div>
+      <div class="row between"><h2>Rotina de hoje</h2><a class="link small" href="#perfil">Mudar horários</a></div>
+      <div class="timeline">${R.map((r, i) => `<div class="tl ${r.m <= now ? "past" : ""} ${i === nextIdx ? "nextup" : ""}"><span class="h">${fromMin(r.m)}</span><span class="rail"><b></b></span><div class="x"><strong>${r.t}</strong>${i === nextIdx ? `<span>${r.s}</span>` : ""}</div></div>`).join("")}</div>
+      ${!p.bedNow ? `<p class="small muted">Ainda não dorme às ${p.bed}? Informe em <a href="#perfil">Ajustes</a> a hora em que dorme hoje, e o app adianta 15 minutos a cada 2 dias.</p>` : ""}
       <details><summary>De onde vem cada horário</summary><div class="stack">
         <p><b>Horário fixo de acordar</b> é a base. Para adiantar a hora de dormir, mude 15 a 30 minutos por vez.</p>
         <p><b>Luz forte de manhã</b> adianta o relógio; luz forte à noite atrasa. Se acordar antes do sol, use lâmpada forte.</p>
@@ -685,30 +668,30 @@ function renderComida() {
   return `${header("Alimentação", `${I.G.label} · ${fmt(T.w, 1)} kg · treino ${p.train}×/sem`)}
   ${switcher}
   <div class="card">
-    <div class="kcal-head"><div><div class="eyebrow">Meta de hoje</div><div class="v num">${fmt(T.kcal)}<small> kcal</small></div></div><span class="small muted">${adjTxt}</span></div>
-    <div><div class="mline"><span>Comido hoje</span><span class="num muted">${fmt(eat.kcal)} kcal · ${fmt(eat.prot)} g proteína</span></div><div class="bar" style="height:9px"><span style="width:${Math.min(100, eat.kcal / T.kcal * 100)}%"></span></div></div>
-    <div class="targets">
-      <div class="target"><div class="v num">${T.prot}<small> g</small></div><div class="l">Proteína</div></div>
-      <div class="target"><div class="v num">${T.carb}<small> g</small></div><div class="l">Carboidrato</div></div>
-      <div class="target"><div class="v num">${T.fat}<small> g</small></div><div class="l">Gordura</div></div>
-      <div class="target"><div class="v num">${T.fiber}<small> g</small></div><div class="l">Fibra</div></div>
-    </div>
-    <p class="small muted">Cada refeição tem 3 fichas. Escolha a que quiser no dia; as quantidades já estão ajustadas para a sua meta${Math.abs(f - 1) > 0.04 ? ` (porções ${f > 1 ? "+" : "−"}${Math.round(Math.abs(f - 1) * 100)}% sobre a receita base)` : ""}.${T.capped ? " O ajuste de calorias foi limitado à faixa segura." : ""}</p>
+    <div class="kcal-head"><div><div class="eyebrow">Meta de hoje</div><div class="v num">${fmt(T.kcal)}<small> kcal</small></div></div><span class="small muted num">${fmt(eat.kcal)} kcal · ${fmt(eat.prot)} g proteína hoje</span></div>
+    <div class="bar" style="height:9px"><span style="width:${Math.min(100, eat.kcal / T.kcal * 100)}%"></span></div>
+    <details><summary>Macros e como calculamos</summary><div class="stack">
+      <div class="targets">
+        <div class="target"><div class="v num">${T.prot}<small> g</small></div><div class="l">Proteína</div></div>
+        <div class="target"><div class="v num">${T.carb}<small> g</small></div><div class="l">Carboidrato</div></div>
+        <div class="target"><div class="v num">${T.fat}<small> g</small></div><div class="l">Gordura</div></div>
+        <div class="target"><div class="v num">${T.fiber}<small> g</small></div><div class="l">Fibra</div></div>
+      </div>
+      <p>Calorias: ${adjTxt}.${T.capped ? " O ajuste foi limitado à faixa segura." : ""} As porções das fichas já estão ajustadas para essa meta${Math.abs(f - 1) > 0.04 ? ` (${f > 1 ? "+" : "−"}${Math.round(Math.abs(f - 1) * 100)}% sobre a receita base)` : ""}.</p>
+      <p>Gasto pela fórmula de Mifflin-St Jeor vezes o nível de treino. Limites: ganho de +5% a +20%, perda de −5% a −25%. Proteína: ${fmt(I.G.prot, 1)} g por kg (faixa dos estudos: 1,6 a 2,2), e só funciona com musculação.</p>
+      <p class="src">Valores pela tabela TACO (Unicamp) e rótulos, aproximados. Fontes: ISSN, Morton 2018, Sports Medicine 2023, OMS, NICE, BDA 2025. Um nutricionista ajusta ao seu caso.</p>
+    </div></details>
   </div>
   ${plan.map(m => `<section class="card" id="f-${m.id}">
-    <div class="ficha-head"><div class="stack" style="gap:2px"><span class="time">${fromMin(m.min)}</span><h2>${m.n}</h2></div>${d.meals[m.id] != null ? '<span class="pill good">Feita hoje</span>' : '<span class="pill">Escolha uma</span>'}</div>
+    <div class="ficha-head"><div class="stack" style="gap:2px"><span class="time">${fromMin(m.min)}</span><h2>${m.n}</h2></div>${d.meals[m.id] != null ? '<span class="pill good">Feita hoje</span>' : `<button class="btn sm ghost" data-a="ficha" data-id="${m.id}">Comi outra coisa</button>`}</div>
     <div class="opts">${m.options.map((o, i) => optCard(m, o, i, entryOf(d, m.id))).join("")}</div>
     <span class="swipe-hint">Deslize para ver as ${m.options.length} opções</span>
-    <div class="row between wrap"><div class="note" style="flex:1;min-width:200px">${esc(m.why)}</div><button class="btn sm ghost" data-a="ficha" data-id="${m.id}">Comi outra coisa</button></div>
   </section>`).join("")}
-  <div class="card"><h2>Bons alimentos para o seu objetivo</h2>
-    <div class="guide">${foodGuide(S.goal.type)}</div>
-    <p class="small muted">Nenhum alimento sozinho faz ganhar ou perder peso. O que decide é o total do dia; estes facilitam chegar nele.</p>
-  </div>
-  <div class="cols">
-   <div class="col">
-    <div class="card"><h2>Açúcar: quanto cabe no seu dia</h2>
-      <p class="small muted">Conta só o açúcar livre: o que você adiciona, mais mel, xarope e suco. Fruta inteira não entra.</p>
+  <div class="card"><h2>Guia rápido</h2>
+    <details><summary>Bons alimentos para o seu objetivo</summary><div class="stack"><div class="guide">${foodGuide(S.goal.type)}</div>
+      <p>Nenhum alimento sozinho faz ganhar ou perder peso. O que decide é o total do dia; estes facilitam chegar nele.</p></div></details>
+    <details><summary>Açúcar: quanto cabe no seu dia</summary><div class="stack">
+      <p>Conta só o açúcar livre: o que você adiciona, mais mel, xarope e suco. Fruta inteira não entra.</p>
       <div class="eq">
         <div><span class="muted">Limite (10%)</span><b class="num">${T.sugar10} g</b>≈ ${Math.round(T.sugar10 / 4)} colheres de chá</div>
         <div><span class="muted">Ideal (5%)</span><b class="num">${T.sugar5} g</b>≈ ${Math.round(T.sugar5 / 4)} colheres de chá</div>
@@ -717,28 +700,16 @@ function renderComida() {
         <div><span class="muted">Lata de refrigerante</span><b class="num">~35 g</b>${Math.round(35 / T.sugar10 * 100)}% do limite</div>
         <div><span class="muted">Na prática</span><b>1 doce</b>pequeno por dia cabe</div>
       </div>
-      <p class="small muted">Açúcar não dá energia que dura: em 31 estudos, as pessoas ficaram mais cansadas na primeira hora depois de comer. A exceção é logo após treino pesado.</p>
-    </div>
-   </div>
-   <div class="col">
-    <div class="card"><h2>Energia e intestino</h2><div class="stack">
+      <p>Açúcar não dá energia que dura: em 31 estudos, as pessoas ficaram mais cansadas na primeira hora depois de comer. A exceção é logo após treino pesado.</p></div></details>
+    <details><summary>Energia e intestino</summary><div class="stack" style="color:var(--fg)">
       <div class="tip">Proteína em todas as refeições: cerca de ${T.perMeal} g em cada.</div>
       <div class="tip">Sem fome de manhã? Vá de vitamina. Caloria líquida não tira a fome do resto do dia.</div>
       <div class="tip">Uma concha de feijão no almoço cobre um terço da fibra do dia.</div>
       <div class="tip">Kiwi: 2 a 3 por dia, por 4 semanas, tem teste direto para o intestino.</div>
       <div class="tip">Água: ${T.water} copos, cerca de ${fmt(T.w * 0.035, 1)} L por dia.</div>
-      <div class="tip">Creatina: 3 a 5 g por dia, todo dia. Ative o lembrete no Perfil, se usar.</div></div>
-      <details><summary>Como os números foram calculados</summary><div class="stack">
-        <p>Gasto diário pela fórmula de Mifflin-St Jeor multiplicada pelo nível de treino. As calorias da meta saem do quanto você quer mudar e em quanto tempo, dentro de limites seguros (ganho: +5% a +20%; perda: −5% a −25%).</p>
-        <p>Proteína: ${fmt(I.G.prot, 1)} g por kg. A faixa dos estudos vai de 1,6 a 2,2 g/kg e só funciona com musculação.</p>
-        <p>Valores das fichas pela tabela TACO (Unicamp) e rótulos. São aproximados.</p>
-        <p class="src">Fontes: ISSN, Morton 2018, Sports Medicine 2023, OMS, NICE, BDA 2025. Um nutricionista ajusta ao seu caso.</p>
-      </div></details>
-    </div>
-   </div>
+      <div class="tip">Creatina: 3 a 5 g por dia, todo dia. Ative o lembrete em Ajustes, se usar.</div></div></details>
   </div>`;
 }
-
 function foodGuide(type) {
   const gain = `<div><h3><i style="background:var(--lime2)"></i>Para ganhar massa</h3><ul>
     <li><b>Cuscuz</b> com ovo, queijo ou carne</li><li><b>Arroz com feijão</b>, a base de sempre</li><li><b>Ovos, frango, carne, peixe</b> em toda refeição</li>
@@ -781,26 +752,25 @@ function weightChart(I) {
 function renderMeta() {
   const { T } = ctx(), I = goalInfo(), g = S.goal, P = progress();
   const week = []; for (let i = 6; i >= 0; i--) { const k = keyOf(addDays(new Date(), -i)); week.push({ k, s: P.scores[k] || 0 }); }
-  const unit = g.type === "perder" ? "perder" : "ganhar";
   let alert = "";
   if (g.type !== "manter") {
-    if (I.reached) alert = `<div class="alert good"><div><b>Meta batida.</b>Você chegou em ${fmt(I.cur, 1)} kg. As calorias voltaram para manutenção. Defina a próxima meta quando quiser.</div></div>`;
-    else if (I.verdict === "fast") alert = `<div class="alert"><div><b>Ritmo acima do recomendado.</b>${fmt(Math.abs(I.planWeek), 2)} kg por semana é ${fmt(I.ratePct, 1)}% do seu peso. A faixa dos estudos é ${fmt(I.G.lo, 2)}% a ${fmt(I.G.hi, 1)}% (${fmt(I.weekLo, 2)} a ${fmt(I.weekHi, 2)} kg). ${g.type === "ganhar" ? "Acima disso, o que entra a mais é principalmente gordura." : "Acima disso, perde-se mais músculo."} Em ritmo saudável, essa meta leva cerca de ${I.healthyMonths} meses.</div></div>`;
+    if (I.reached) alert = `<div class="alert good"><div><b>Meta batida.</b>Você chegou em ${fmt(I.cur, 1)} kg. As calorias voltaram para manutenção.</div></div>`;
+    else if (I.verdict === "fast") alert = `<div class="alert"><div><b>Ritmo acima do recomendado.</b>${fmt(Math.abs(I.planWeek), 2)} kg por semana é ${fmt(I.ratePct, 1)}% do seu peso; a faixa dos estudos vai até ${fmt(I.G.hi, 1)}% (${fmt(I.weekHi, 2)} kg). ${g.type === "ganhar" ? "Acima disso, o que entra a mais é principalmente gordura." : "Acima disso, perde-se mais músculo."} Em ritmo saudável, leva cerca de ${I.healthyMonths} meses.</div></div>`;
     else if (I.verdict === "slow") alert = `<div class="alert good"><div><b>Ritmo bem tranquilo.</b>Dá para chegar antes, se quiser: a faixa saudável vai até ${fmt(I.weekHi, 2)} kg por semana.</div></div>`;
-    else alert = `<div class="alert good"><div><b>Ritmo dentro da faixa saudável.</b>${fmt(Math.abs(I.planWeek), 2)} kg por semana (${fmt(I.ratePct, 2)}% do seu peso).</div></div>`;
   }
   const onTrack = g.type === "manter" ? null : (g.type === "ganhar" ? I.cur >= I.expected - 0.3 : I.cur <= I.expected + 0.3);
+  const got = BADGES.filter(b => S.badges[b.id]), locked = BADGES.filter(b => !S.badges[b.id]);
+  const badge = b => `<div class="badge ${S.badges[b.id] ? "on" : ""}" title="${esc(b.d)}"><span class="b">${IC[b.ic](24)}</span>${esc(b.n)}</div>`;
   return `${header("Meta", g.type === "manter" ? "Manter o peso" : `${I.G.label.split(" ")[0]} ${fmt(Math.abs(I.total), 1)} kg até ${shortDate(g.endDate)}`)}
   <div class="cols">
    <div class="col">
     <div class="card">
-      <div class="row between"><span class="eyebrow">Sua meta</span><button class="link small" data-a="goal">Editar meta</button></div>
+      <div class="row between"><h2>Seu peso</h2><button class="link small" data-a="goal">Editar meta</button></div>
       ${g.type === "manter" ? `<div class="row" style="gap:10px;align-items:baseline"><span class="score num" style="color:var(--amber)">${fmt(I.cur, 1)}</span><span class="muted">kg · manter</span></div>` : `
-      <div class="goal-hero"><div><div class="k">${fmt(g.start, 1)}<small> kg</small></div><div class="small muted">início</div></div>
+      <div class="goal-hero"><div><div class="k">${fmt(I.cur, 1)}<small> kg</small></div><div class="small muted">agora</div></div>
         <div class="arrow">${IC.arrow(20)}</div><div><div class="k" style="color:var(--amber)">${fmt(g.target, 1)}<small> kg</small></div><div class="small muted">meta</div></div></div>
-      <div><div class="mline"><span>Agora: <b class="num">${fmt(I.cur, 1)} kg</b> (${sign(I.done)} kg)</span><span class="num muted">${Math.round(I.pct * 100)}%</span></div>
-        <div class="prog"><span style="width:${Math.max(2, I.pct * 100)}%"></span><i style="left:${I.timePct * 100}%" title="onde você deveria estar hoje"></i></div>
-        <p class="small muted" style="margin-top:7px">${I.daysLeft} dias restantes · o traço marca onde você deveria estar hoje</p></div>
+      <div><div class="prog"><span style="width:${Math.max(2, I.pct * 100)}%"></span><i style="left:${I.timePct * 100}%" title="onde você deveria estar hoje"></i></div>
+        <div class="mline" style="margin:8px 0 0"><span class="small muted num">${sign(I.done)} kg de ${sign(I.total)} · ${Math.round(I.pct * 100)}%</span><span class="small muted num">${I.daysLeft} dias restantes</span></div></div>
       <div class="stats">
         <div class="stat"><div class="v num">${fmt(Math.abs(I.needWeek), 2)}<small> kg</small></div><div class="l">por semana</div></div>
         <div class="stat"><div class="v num">${fmt(T.kcal)}</div><div class="l">kcal/dia</div></div>
@@ -809,20 +779,21 @@ function renderMeta() {
       ${alert}
       <button class="btn amber block" data-a="weight">${IC.scale(20)} Registrar peso</button>
     </div>
-    <div class="card"><h2>Peso</h2>${weightChart(I)}
+    <div class="card"><h2>Evolução</h2>${weightChart(I)}
       <p class="small muted">Pese-se de manhã, depois do banheiro, antes de comer. O que vale é a média da semana.</p></div>
    </div>
    <div class="col">
     <div class="card">
       <div class="row between"><span class="eyebrow">Nível ${P.lvl + 1}</span><span class="pill sleep">${IC.flame(13)} ${P.streak} ${P.streak === 1 ? "dia" : "dias"}</span></div>
-      <div class="row between" style="align-items:baseline"><h2 style="font-size:22px">${P.name}</h2><span class="small muted num">${fmt(P.xp)} pts${P.nxt ? ` · faltam ${fmt(P.nxt - P.xp)}` : ""}</span></div>
+      <div class="row between" style="align-items:baseline"><h2 style="font-size:24px">${P.name}</h2><span class="small muted num">${fmt(P.xp)} pts${P.nxt ? ` · faltam ${fmt(P.nxt - P.xp)}` : ""}</span></div>
       <div class="bar" style="height:9px"><span style="width:${Math.max(3, P.pct * 100)}%;background:var(--sleep)"></span></div>
       <div class="week">${week.map(w => { const d = parseKey(w.k), l = w.s >= 80 ? "l3" : w.s >= 50 ? "l2" : w.s > 0 ? "l1" : "";
         return `<div class="wd ${w.k === todayKey() ? "today" : ""}"><span>${WD[d.getDay()][0].toUpperCase()}</span><div class="sq ${l}">${w.s || ""}</div></div>`; }).join("")}</div>
-      <p class="small muted">Cada dia vale até 100 pontos: fichas (35), sono (25), água (15), hábitos (15) e proteína (10). A sequência conta dias com 50 ou mais, e uma falta por semana não quebra.</p>
+      <details><summary>Como os pontos funcionam</summary><div class="stack"><p>Cada dia vale até 100 pontos: refeições (35), sono (25), água (15), hábitos (15) e proteína (10). A sequência conta dias com 50 ou mais, e uma falta por semana não quebra.</p></div></details>
     </div>
-    <div class="card"><div class="row between"><h2>Conquistas</h2><span class="small muted">${Object.keys(S.badges).length} de ${BADGES.length}</span></div>
-      <div class="badges">${BADGES.map(b => `<div class="badge ${S.badges[b.id] ? "on" : ""}" title="${esc(b.d)}"><span class="b">${IC[b.ic](24)}</span>${esc(b.n)}</div>`).join("")}</div>
+    <div class="card"><div class="row between"><h2>Conquistas</h2><span class="small muted">${got.length} de ${BADGES.length}</span></div>
+      <div class="badges">${[...got, ...locked].slice(0, 8).map(badge).join("")}</div>
+      ${BADGES.length > 8 ? `<details><summary>Ver todas</summary><div class="badges" style="margin-top:14px">${[...got, ...locked].slice(8).map(badge).join("")}</div></details>` : ""}
     </div>
    </div>
   </div>`;
@@ -855,27 +826,32 @@ function readProfile(f) {
 function setWeight(kg, k) { k = k || todayKey(); S.weights[k] = { kg: +kg.toFixed(1), u: Date.now() }; S.profile.weight = +kg.toFixed(1); S.profile.u = Date.now(); }
 
 function renderPerfil() {
-  const p = S.profile, T = ctx().T;
-  const acct = !HAS_CLOUD ? `<p class="small muted">A sincronização ainda não foi configurada neste app. Seus dados ficam salvos neste aparelho. Veja o arquivo LEIA-ME para ligar o login.</p>`
-    : uid ? `<div class="row between wrap"><div class="stack" style="gap:2px"><b>${esc(userEmail || "Conta conectada")}</b><span class="small muted">${syncState === "ok" ? "Tudo sincronizado entre seus aparelhos" : syncState === "off" ? "Sem conexão. Sincroniza quando voltar." : "Sincronizando"}</span></div><button class="btn sm ghost" data-a="signout">Sair</button></div>
-       <button class="btn ghost block" data-a="syncnow">Sincronizar agora</button>`
-    : `<p class="small muted">Você está usando sem conta. Entre para sincronizar celular e computador.</p><button class="btn sleep block" data-a="login">Entrar ou criar conta</button>`;
-  return `${header("Perfil", p.name ? esc(p.name) : "Seus dados")}
+  const p = S.profile, T = ctx().T, I = goalInfo(), g = S.goal;
+  const name = p.name || (uid ? userEmail.split("@")[0] : "Sem conta");
+  const who = `<div class="row" style="gap:14px"><span class="avatar">${esc((name[0] || "?").toUpperCase())}</span><div class="stack" style="gap:2px"><b style="font-size:16px">${esc(name)}</b><span class="small muted">${uid ? esc(userEmail) : "Dados só neste aparelho"}</span></div></div>`;
+  const acct = !HAS_CLOUD ? `${who}<p class="small muted">A sincronização ainda não foi configurada neste app.</p>`
+    : uid ? `${who}<div class="setrow"><span>Sincronização</span><span class="small muted">${SYNC_TXT[syncState][1]}</span></div>
+       <div class="row" style="gap:8px"><button class="btn sm ghost" style="flex:1" data-a="syncnow">Sincronizar agora</button><button class="btn sm ghost" style="flex:1" data-a="signout">Sair da conta</button></div>`
+    : `${who}<p class="small muted">Entre para sincronizar celular e computador e não perder seus dados.</p><button class="btn sleep block" data-a="login">Entrar ou criar conta</button>`;
+  return `${header("Ajustes", "Conta, aparência e seus dados")}
   <div class="cols">
+   <div class="col">
+    <div class="card"><h2>Conta</h2>${acct}</div>
+    <div class="card"><h2>Aparência</h2>
+      <div class="seg" data-seg="theme">${[["auto", "Automático"], ["light", "Claro"], ["dark", "Escuro"]].map(([v, l]) => `<button type="button" class="${themePref() === v ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div>
+      <p class="small muted">Automático segue o modo do seu aparelho.</p></div>
+    <div class="card"><h2>Meta de peso</h2>
+      <div class="setrow"><span>${g.type === "manter" ? "Manter o peso" : `${I.G.label} ${fmt(Math.abs(I.total), 1)} kg`}</span><span class="small muted">${g.type === "manter" ? "" : `até ${shortDate(g.endDate)}`}</span></div>
+      <button class="btn ghost block" data-a="goal">Editar meta</button></div>
+    <div class="card"><h2>Instalar em outro aparelho</h2><p class="small muted">Abra a página de downloads no outro aparelho e entre com a mesma conta.</p><a class="btn ghost block" href="../">Página de downloads</a></div>
+   </div>
    <div class="col">
     <form class="card" id="pf" autocomplete="off"><h2>Seus dados</h2>${profileFields(p, "p")}
       <button type="button" class="toggle ${p.creatine ? "on" : ""}" data-a="creatine" aria-pressed="${!!p.creatine}"><span><b>Uso creatina</b><br><span class="small muted">Mostra o lembrete diário de 3 a 5 g</span></span><span class="sw"></span></button>
       <button class="btn block" type="submit">Salvar</button>
       <p class="small muted">Gasto estimado: <b class="num">${fmt(T.tdee)} kcal</b> por dia. Em repouso: <span class="num">${fmt(T.bmr)} kcal</span>.</p>
     </form>
-   </div>
-   <div class="col">
-    <div class="card"><h2>Aparência</h2>
-      <div class="seg" data-seg="theme">${[["auto", "Automático"], ["light", "Claro"], ["dark", "Escuro"]].map(([v, l]) => `<button type="button" class="${themePref() === v ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div>
-      <p class="small muted">Automático segue o modo do seu celular ou computador. Vale só para este aparelho.</p></div>
-    <div class="card"><h2>Conta e sincronização</h2>${acct}</div>
-    <div class="card"><h2>Instalar em outro aparelho</h2><p class="small muted">Abra a página de downloads no celular ou no computador e siga o passo do seu aparelho. Entre com a mesma conta e tudo aparece.</p><a class="btn ghost block" href="../">Abrir página de downloads</a></div>
-    <div class="card flat"><p class="small muted">O Sempre Saudáveis organiza hábitos com base em estudos e diretrizes. Não substitui médico ou nutricionista. Dor de cabeça frequente, sempre do mesmo lado, ou com ronco e boca seca ao acordar pede avaliação médica.</p></div>
+    <p class="small muted" style="padding:0 4px">O Sempre Saudáveis organiza hábitos com base em estudos e diretrizes. Não substitui médico ou nutricionista. Dor de cabeça frequente, sempre do mesmo lado, ou com ronco e boca seca ao acordar pede avaliação médica.</p>
    </div>
   </div>`;
 }
@@ -1079,7 +1055,7 @@ document.addEventListener("click", e => {
   const segBtn = e.target.closest(".seg[data-seg] button");
   if (segBtn) { segBtn.parentElement.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === segBtn));
     if (segBtn.parentElement.dataset.seg === "mode") { gateMode = segBtn.dataset.v; gateMsg = ""; render(); }
-    if (segBtn.parentElement.dataset.seg === "theme") { try { localStorage.setItem("ss.theme", segBtn.dataset.v); } catch (e) {} applyTheme(segBtn.dataset.v); }
+    if (segBtn.parentElement.dataset.seg === "theme") { try { localStorage.setItem("ss.theme", segBtn.dataset.v); } catch (e) {} applyTheme(segBtn.dataset.v); if (view === "app" && S.profile.setup) render(); }
     if (segBtn.parentElement.dataset.seg === "foodview") { foodView = segBtn.dataset.v; render(); window.scrollTo(0, 0); }
     const onb = segBtn.closest("#onb"); if (onb) goalPreview(onb, num(onb.querySelector('[name="weight"]').value, 35, 200, currentWeight())); }
   const b = e.target.closest("[data-a]"); if (!b || b.closest(".sheet")) return;

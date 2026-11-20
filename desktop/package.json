@@ -1,7 +1,7 @@
 {
   "name": "sempre-saudaveis",
-  "productName": "Sempre Saudáveis",
-  "version": "1.0.0",
+  "productName": "Sempre Saudaveis",
+  "version": "1.0.1",
   "description": "Sono, fichas de alimentação e meta de peso.",
   "author": "Sempre Saudáveis",
   "main": "main.js",
@@ -12,27 +12,43 @@
     "dist:win": "electron-builder --win --x64"
   },
   "devDependencies": {
-    "electron": "33.2.1",
-    "electron-builder": "25.1.8"
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.0"
   },
   "build": {
     "appId": "io.github.joaotenoli.sempresaudaveis",
-    "productName": "Sempre Saudáveis",
+    "productName": "Sempre Saudaveis",
     "copyright": "Sempre Saudáveis",
-    "directories": { "output": "dist" },
-    "files": ["main.js"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js"
+    ],
     "icon": "icon.png",
     "afterPack": "./adhoc-sign.js",
     "publish": null,
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "category": "public.app-category.healthcare-fitness",
       "identity": null,
       "hardenedRuntime": false,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "CFBundleDisplayName": "Sempre Saudáveis"
+      }
     },
-    "dmg": { "artifactName": "SempreSaudaveis-mac-${arch}.dmg", "title": "Sempre Saudáveis" },
-    "win": { "target": ["nsis"] },
+    "dmg": {
+      "artifactName": "SempreSaudaveis-mac-${arch}.dmg",
+      "title": "Sempre Saudáveis"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
     "nsis": {
       "artifactName": "SempreSaudaveis-windows.exe",
       "oneClick": true,
