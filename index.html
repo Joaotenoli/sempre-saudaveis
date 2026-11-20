@@ -8,6 +8,11 @@
 <meta name="theme-color" content="#C4F26A">
 <link rel="icon" type="image/png" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Saudáveis">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 @font-face{font-family:"Inter Tight";src:url("fonts/intertight-500.woff2") format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Inter Tight";src:url("fonts/intertight-600.woff2") format("woff2");font-weight:600;font-display:swap}
@@ -202,10 +207,10 @@ footer{padding-block:28px 48px;color:var(--muted);font-size:13.5px}
       (p === "ios" ? '<li>Toque em ' + share + ' ou em <b>⋯</b>, no canto da tela.</li><li>Escolha <b>Abrir no Safari</b> (ou "Abrir no navegador").</li><li>No Safari, siga os passos de instalação que vão aparecer aqui.</li>'
                    : '<li>Toque em ' + dots + ' no canto de cima da tela.</li><li>Escolha <b>Abrir no Chrome</b> (ou "Abrir no navegador").</li><li>No Chrome, siga os passos de instalação que vão aparecer aqui.</li>') +
       '</ol><p class="lead">Ou copie o endereço e cole no navegador:</p><div class="cmd"><code>' + location.origin + location.pathname + '</code><button type="button" data-copy="' + location.origin + location.pathname + '">Copiar</button></div></div>';
-  else if (p === "ios") html = '<div class="smart"><span class="tag">Seu aparelho: iPhone</span><h2>Instale em 3 toques</h2>' +
+  else if (p === "ios") html = '<div class="smart"><span class="tag">Seu aparelho: iPhone</span><h2>Instale no iPhone</h2>' +
       (iosNotSafari ? '<p class="lead"><b>Use o Safari.</b> Em outros navegadores do iPhone a opção pode não aparecer. Copie o endereço e abra no Safari: <span class="cmd" style="display:inline-flex"><code>' + location.origin + location.pathname + '</code><button type="button" data-copy="' + location.origin + location.pathname + '">Copiar</button></span></p>' : '<p class="lead">No iPhone o app instala pelo Safari, sem App Store.</p>') +
-      '<ol><li>Toque no botão Compartilhar ' + share + ', na barra de baixo do Safari.</li><li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li><li>Toque em <b>Adicionar</b>. Abra o app pelo ícone novo e entre com sua conta.</li></ol>' +
-      '<div class="row2"><a class="btn ghost" href="app/">Prefiro usar no navegador</a></div></div>';
+      '<ol><li>Toque no botão verde <b>Abrir o app</b> aqui embaixo.</li><li>No app, toque no botão Compartilhar ' + share + ', na barra de baixo do Safari (no iPhone mais novo, toque em <b>⋯</b> e depois em Compartilhar).</li><li>Role a lista e toque em <b>Adicionar à Tela de Início</b>, depois em <b>Adicionar</b>.</li><li>Abra o app pelo ícone novo e entre com seu e-mail e senha.</li></ol>' +
+      '<div class="row2"><a class="btn lime" href="app/">Abrir o app</a></div></div>';
   else if (p === "android") html = '<div class="smart"><span class="tag">Seu aparelho: Android</span><h2>Instale o app</h2><p class="lead">O jeito mais fácil é pelo Chrome, sem baixar arquivo.</p>' +
       '<div class="row2"><button class="btn lime" data-install hidden>Instalar agora</button></div>' +
       '<ol><li>No Chrome, toque em ' + dots + ' no canto de cima.</li><li>Toque em <b>Instalar app</b> (ou "Adicionar à tela inicial").</li><li>Confirme em <b>Instalar</b>. Abra pelo ícone e entre com sua conta.</li></ol>' +
@@ -234,7 +239,7 @@ footer{padding-block:28px 48px;color:var(--muted);font-size:13.5px}
   document.addEventListener("click", function (e) { if (e.target.closest("[data-install]")) btn.click(); });
   btn.addEventListener("click", function () { if (!deferred) return; deferred.prompt(); deferred.userChoice.then(function (r) { if (r.outcome === "accepted") { btn.hidden = true; hint.textContent = "Instalado. Procure o ícone do Sempre Saudáveis no seu aparelho."; } deferred = null; }); });
   window.addEventListener("appinstalled", function () { btn.hidden = true; hint.textContent = "Instalado. Procure o ícone do Sempre Saudáveis no seu aparelho."; });
-  if (p === "ios") hint.textContent = "No iPhone: Safari, botão Compartilhar, Adicionar à Tela de Início. Veja o passo a passo abaixo.";
+  if (p === "ios") hint.textContent = "No iPhone: toque em Abrir no navegador e depois em Compartilhar → Adicionar à Tela de Início. Veja o passo a passo abaixo.";
   if (inapp) { hint.textContent = "Abra esta página no Safari ou no Chrome para instalar. Veja abaixo."; document.getElementById("seu").scrollIntoView(); }
   if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("app/sw.js", { scope: "app/" }).catch(function () {});
 })();

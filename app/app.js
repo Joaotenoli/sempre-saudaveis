@@ -1588,6 +1588,14 @@ function render() {
   if (view === "gate") { bar.hidden = true; app.innerHTML = renderGate(); return; }
   if (!S.profile.setup) { bar.hidden = true; app.innerHTML = renderOnb(); goalPreview(app, currentWeight()); return; }
   bar.hidden = false;
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (isIOS && !standalone && !flag("ss.iosHint") && !$("#ioshint")) {
+    const h = document.createElement("div"); h.id = "ioshint"; h.className = "ioshint";
+    h.innerHTML = `<div><b>Instale no iPhone</b><span>Toque em <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg> Compartilhar e depois em <b>Adicionar à Tela de Início</b>.</span></div><button type="button" aria-label="Fechar aviso">×</button>`;
+    h.querySelector("button").addEventListener("click", () => { flag("ss.iosHint", "1"); h.remove(); });
+    document.body.appendChild(h);
+  }
   if (!$("#fab")) { const f = document.createElement("div"); f.className = "fabs"; f.innerHTML = `<button id="totop" class="totop" data-a="totop" hidden aria-label="Voltar ao topo">${IC.arrowup(20)}</button><button id="fab" class="fab" data-a="quick" aria-label="Registrar">${IC.plus(26)}</button>`; document.body.appendChild(f); }
   const P = progress(); checkBadges(P, !rendered); rendered = true;
   app.innerHTML = tab === "sono" ? renderSono() : tab === "comida" ? renderComida() : tab === "compras" ? `${header("Lista de compras", "O que falta comprar")}${renderCompras()}` : tab === "meta" ? renderMeta() : tab === "perfil" ? renderPerfil() : renderHoje();
