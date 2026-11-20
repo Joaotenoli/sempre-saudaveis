@@ -1,4 +1,4 @@
-/* Vigor — sono, fichas de alimentação e meta de peso. Sem build: JavaScript puro. */
+/* Sempre Saudáveis — sono, fichas de alimentação e meta de peso. Sem build: JavaScript puro. */
 (function () {
 "use strict";
 
@@ -41,6 +41,18 @@ let lastSync = 0;
 const CFG = window.VIGOR_CONFIG || {};
 const HAS_CLOUD = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
 const lsKey = () => "vigor.v2." + (uid || "local");
+
+/* Aparência: automático (segue o aparelho), claro ou escuro. Vale por aparelho. */
+function themePref() { try { return localStorage.getItem("ss.theme") || "auto"; } catch (e) { return "auto"; } }
+function applyTheme(t) {
+  t = t || themePref();
+  const root = document.documentElement;
+  if (t === "auto") root.removeAttribute("data-theme"); else root.setAttribute("data-theme", t);
+  const dark = t === "dark" || (t === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => { m.setAttribute("content", dark ? "#0C0F0B" : "#F2F4EE"); m.removeAttribute("media"); });
+}
+applyTheme();
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => applyTheme());
 
 function lsRead(key) { try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
 function lsWrite() { try { localStorage.setItem(lsKey(), JSON.stringify(S)); } catch (e) {} }
@@ -134,13 +146,17 @@ window.addEventListener("online", syncNow);
 window.addEventListener("offline", () => uid && setSync("off"));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { syncNow(); if (!$("#scrim")) softRender(); } });
 
+function nameFromAccount(session) {
+  const n = session && session.user && session.user.user_metadata && session.user.user_metadata.name;
+  if (n && !S.profile.name) S.profile.name = String(n).slice(0, 40);
+}
 async function adoptSession(session) {
   uid = session.user.id;
   const mine = lsRead(lsKey()), loose = lsRead("vigor.v2.local");
   S = normalize(mine || DEFAULT());
   if (loose && normalize(loose).profile.setup) { S = merge(S, loose); try { localStorage.removeItem("vigor.v2.local"); } catch (e) {} }
   lsWrite();
-  await syncNow(); listen(); render();
+  await syncNow(); nameFromAccount(session); listen(); render();
 }
 
 /* ================= ciência → números ================= */
@@ -854,9 +870,12 @@ function renderPerfil() {
     </form>
    </div>
    <div class="col">
+    <div class="card"><h2>Aparência</h2>
+      <div class="seg" data-seg="theme">${[["auto", "Automático"], ["light", "Claro"], ["dark", "Escuro"]].map(([v, l]) => `<button type="button" class="${themePref() === v ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div>
+      <p class="small muted">Automático segue o modo do seu celular ou computador. Vale só para este aparelho.</p></div>
     <div class="card"><h2>Conta e sincronização</h2>${acct}</div>
     <div class="card"><h2>Instalar em outro aparelho</h2><p class="small muted">Abra a página de downloads no celular ou no computador e siga o passo do seu aparelho. Entre com a mesma conta e tudo aparece.</p><a class="btn ghost block" href="../">Abrir página de downloads</a></div>
-    <div class="card flat"><p class="small muted">O Vigor organiza hábitos com base em estudos e diretrizes. Não substitui médico ou nutricionista. Dor de cabeça frequente, sempre do mesmo lado, ou com ronco e boca seca ao acordar pede avaliação médica.</p></div>
+    <div class="card flat"><p class="small muted">O Sempre Saudáveis organiza hábitos com base em estudos e diretrizes. Não substitui médico ou nutricionista. Dor de cabeça frequente, sempre do mesmo lado, ou com ronco e boca seca ao acordar pede avaliação médica.</p></div>
    </div>
   </div>`;
 }
@@ -1031,9 +1050,10 @@ let userEmail = "", gateMode = "in", gateMsg = "", gateBusy = false, view = "app
 function renderGate() {
   return `<div class="gate"><div class="box">
     ${mascot("happy", 120, "#C4F26A", true)}
-    <div class="stack" style="gap:6px"><h1>Vigor</h1><p class="muted">Sono, fichas de alimentação e meta de peso. Entre para sincronizar celular e computador.</p></div>
+    <div class="stack" style="gap:6px"><h1>Sempre Saudáveis</h1><p class="muted">Sono, fichas de alimentação e meta de peso. Entre para sincronizar celular e computador.</p></div>
     <form class="card" id="auth">
       <div class="seg" data-seg="mode"><button type="button" class="${gateMode === "in" ? "on" : ""}" data-v="in">Entrar</button><button type="button" class="${gateMode === "up" ? "on" : ""}" data-v="up">Criar conta</button></div>
+      ${gateMode === "up" ? `<div class="field"><label for="a-name">Seu nome</label><input id="a-name" name="name" autocomplete="given-name" maxlength="40" required placeholder="Como quer ser chamado"></div>` : ""}
       <div class="field"><label for="a-email">E-mail</label><input id="a-email" name="email" type="email" autocomplete="email" required></div>
       <div class="field"><label for="a-pass">Senha</label><input id="a-pass" name="password" type="password" autocomplete="${gateMode === "in" ? "current-password" : "new-password"}" minlength="6" required></div>
       ${gateMsg ? `<p class="err" role="alert">${esc(gateMsg)}</p>` : ""}
@@ -1059,6 +1079,7 @@ document.addEventListener("click", e => {
   const segBtn = e.target.closest(".seg[data-seg] button");
   if (segBtn) { segBtn.parentElement.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === segBtn));
     if (segBtn.parentElement.dataset.seg === "mode") { gateMode = segBtn.dataset.v; gateMsg = ""; render(); }
+    if (segBtn.parentElement.dataset.seg === "theme") { try { localStorage.setItem("ss.theme", segBtn.dataset.v); } catch (e) {} applyTheme(segBtn.dataset.v); }
     if (segBtn.parentElement.dataset.seg === "foodview") { foodView = segBtn.dataset.v; render(); window.scrollTo(0, 0); }
     const onb = segBtn.closest("#onb"); if (onb) goalPreview(onb, num(onb.querySelector('[name="weight"]').value, 35, 200, currentWeight())); }
   const b = e.target.closest("[data-a]"); if (!b || b.closest(".sheet")) return;
@@ -1089,9 +1110,9 @@ document.addEventListener("submit", async e => {
   if (f.id === "pf") { const { p, w } = readProfile(f); const changed = w !== currentWeight(); S.profile = { ...p, u: Date.now() }; if (changed || !weightList().length) setWeight(w); commit(); render(); toast("Salvo. Plano e rotina atualizados."); }
   else if (f.id === "onb") { const { p, w } = readProfile(f); S.profile = { ...p, setup: true, u: Date.now() }; setWeight(w); S.goal = readGoal(f, w); commit(); view = "app"; location.hash = "hoje"; tab = "hoje"; render(); window.scrollTo(0, 0); toast("Plano montado. Comece registrando a noite."); }
   else if (f.id === "auth") {
-    const email = f.email.value.trim(), password = f.password.value; gateBusy = true; gateMsg = ""; render();
+    const email = f.email.value.trim(), password = f.password.value, name = f.name ? f.name.value.trim().slice(0, 40) : ""; gateBusy = true; gateMsg = ""; render();
     try {
-      if (gateMode === "up") { const { data, error } = await sb.auth.signUp({ email, password }); if (error) throw error;
+      if (gateMode === "up") { const { data, error } = await sb.auth.signUp({ email, password, options: { data: { name } } }); if (error) throw error;
         if (!data.session) { gateMsg = "Conta criada. Confirme pelo link que chegou no seu e-mail e depois entre."; gateMode = "in"; } }
       else { const { error } = await sb.auth.signInWithPassword({ email, password }); if (error) throw error; }
     } catch (err) { const m = String(err && err.message || "");
@@ -1125,7 +1146,7 @@ async function boot() {
       sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
       const { data } = await sb.auth.getSession();
       sb.auth.onAuthStateChange((ev, session) => { if (session && session.user.id !== uid) { userEmail = session.user.email || ""; view = "app"; adoptSession(session); } });
-      if (data && data.session) { userEmail = data.session.user.email || ""; uid = data.session.user.id; S = normalize(lsRead(lsKey()) || DEFAULT()); view = "app"; render(); syncNow().then(listen); return; }
+      if (data && data.session) { userEmail = data.session.user.email || ""; uid = data.session.user.id; S = normalize(lsRead(lsKey()) || DEFAULT()); nameFromAccount(data.session); view = "app"; render(); syncNow().then(listen); return; }
       view = flag("vigor.skipAuth") ? "app" : "gate";
     } catch (e) { view = "app"; }
   }

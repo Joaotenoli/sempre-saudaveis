@@ -1,0 +1,44 @@
+{
+  "name": "sempre-saudaveis",
+  "productName": "Sempre Saudáveis",
+  "version": "1.0.0",
+  "description": "Sono, fichas de alimentação e meta de peso.",
+  "author": "Sempre Saudáveis",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist:mac": "electron-builder --mac --arm64 --x64",
+    "dist:win": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "io.github.joaotenoli.sempresaudaveis",
+    "productName": "Sempre Saudáveis",
+    "copyright": "Sempre Saudáveis",
+    "directories": { "output": "dist" },
+    "files": ["main.js"],
+    "icon": "icon.png",
+    "afterPack": "./adhoc-sign.js",
+    "publish": null,
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.healthcare-fitness",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": { "artifactName": "SempreSaudaveis-mac-${arch}.dmg", "title": "Sempre Saudáveis" },
+    "win": { "target": ["nsis"] },
+    "nsis": {
+      "artifactName": "SempreSaudaveis-windows.exe",
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "Sempre Saudáveis"
+    }
+  }
+}

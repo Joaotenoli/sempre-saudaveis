@@ -1,4 +1,4 @@
--- Vigor: uma linha por pessoa com todos os registros dela.
+-- Sempre Saudáveis: uma linha por pessoa com todos os registros dela.
 -- Cole este arquivo inteiro em Supabase → SQL Editor → New query → Run.
 
 create table if not exists public.vigor_state (

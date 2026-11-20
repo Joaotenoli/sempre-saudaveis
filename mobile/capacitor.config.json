@@ -1,0 +1,11 @@
+{
+  "appId": "io.github.joaotenoli.sempresaudaveis",
+  "appName": "Sempre Saudáveis",
+  "webDir": "www",
+  "backgroundColor": "#F2F4EE",
+  "server": {
+    "url": "https://joaotenoli.github.io/sempre-saudaveis/app/",
+    "cleartext": false,
+    "allowNavigation": ["joaotenoli.github.io", "*.supabase.co"]
+  }
+}

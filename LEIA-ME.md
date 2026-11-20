@@ -1,4 +1,4 @@
-# Vigor
+# Sempre Saudáveis
 
 App de sono, fichas de alimentação e meta de peso. Instala pelo navegador no iPhone, Android, Mac e Windows, funciona offline e sincroniza por login.
 
@@ -33,7 +33,7 @@ A chave `anon` pode ficar no código: quem protege os dados são as regras do `s
 
 ## Passo 2: colocar no ar (GitHub Pages, grátis)
 
-O app está publicado pelo GitHub Pages, a partir do repositório `vigor`. Cada `git push` na branch `main` publica a versão nova em 1 ou 2 minutos.
+O app está publicado pelo GitHub Pages, a partir do repositório `sempre-saudaveis`. Cada `git push` na branch `main` publica a versão nova em 1 ou 2 minutos.
 
 ```bash
 git add -A && git commit -m "Atualiza o app" && git push
@@ -45,7 +45,7 @@ Abra o endereço em cada aparelho e siga a página de downloads. Cada pessoa cri
 
 ## Atualizar o app depois
 
-Mude `VERSION` em `app/sw.js` (por exemplo `vigor-v2`), faça commit e `git push`. Os aparelhos pegam a versão nova na próxima abertura com internet.
+Mude `VERSION` em `app/sw.js` (por exemplo `ss-v3`), faça commit e `git push`. Os aparelhos pegam a versão nova na próxima abertura com internet.
 
 ## Como a sincronização funciona
 
