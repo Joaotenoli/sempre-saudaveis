@@ -391,7 +391,8 @@ function dayScore(k) {
 }
 const LEVELS = [[0, "Primeiro passo"], [200, "Pegando ritmo"], [500, "Constante"], [900, "Firme"], [1400, "Forte"], [2000, "Vigoroso"], [2800, "Incansável"], [3800, "Inabalável"], [5000, "Referência"], [6500, "Lenda da casa"]];
 function activeDays() { return [...new Set([...Object.keys(S.days), ...Object.keys(S.sleep).filter(k => sleepOf(k))])].sort(); }
-function progress() {
+function progress() { const r = progress_(); progressCache = r; return r; }
+function progress_() {
   const days = activeDays(); let xp = 0; const scores = {};
   for (const k of days) { scores[k] = dayScore(k); xp += scores[k]; }
   let lvl = 0; while (lvl + 1 < LEVELS.length && xp >= LEVELS[lvl + 1][0]) lvl++;
@@ -507,28 +508,98 @@ const IC = {
   edit: s => svg('<path d="M4 20h4L19 9a2.800 2.800 0 0 0-4-4L4 16z"/><path d="M13.500 6.500l4 4"/>', s),
   gear: s => svg('<circle cx="12" cy="12" r="3"/><path d="M19.400 13a7.500 7.500 0 0 0 0-2l2-1.500-2-3.400-2.300 1a7.500 7.500 0 0 0-1.700-1L15 3.500h-4l-.400 2.600a7.500 7.500 0 0 0-1.700 1l-2.300-1-2 3.400L6.600 11a7.500 7.500 0 0 0 0 2l-2 1.500 2 3.400 2.300-1a7.500 7.500 0 0 0 1.700 1l.400 2.600h4l.400-2.600a7.500 7.500 0 0 0 1.700-1l2.300 1 2-3.400z"/>', s),
   auto: s => svg('<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"/>', s),
+  up: () => svg('<path d="m6 15 6-6 6 6"/>', 18),
+  down: () => svg('<path d="m6 9 6 6 6-6"/>', 18),
+  plus: s => svg('<path d="M12 5v14M5 12h14"/>', s),
+  arrowup: s => svg('<path d="M12 19V5M6 11l6-6 6 6"/>', s),
   arrow: s => svg('<path d="M5 12h14M13 6l6 6-6 6"/>', s || 18)
 };
 const TABS = [["hoje", "Hoje", "home"], ["sono", "Sono", "moon"], ["comida", "Comida", "bowl"], ["compras", "Compras", "cart"], ["meta", "Meta", "target"], ["perfil", "Ajustes", "gear"]];
 
-/* ================= mascote: Broto ================= */
-function mascot(mood, size, body, live) {
-  const ink = "#10240F", b = body || "#F6FFE3";
-  const eyes = mood === "sleep" ? `<path d="M40 70q7 6 14 0M66 70q7 6 14 0" stroke="${ink}" stroke-width="3.500" fill="none" stroke-linecap="round"/>`
-    : mood === "wow" ? `<circle cx="47" cy="68" r="6" fill="${ink}"/><circle cx="73" cy="68" r="6" fill="${ink}"/><circle cx="49" cy="66" r="2" fill="#fff"/><circle cx="75" cy="66" r="2" fill="#fff"/>`
-    : mood === "calm" ? `<circle cx="47" cy="69" r="3.500" fill="${ink}"/><circle cx="73" cy="69" r="3.500" fill="${ink}"/>`
-    : `<path d="M40 71q7 -8 14 0M66 71q7 -8 14 0" stroke="${ink}" stroke-width="3.500" fill="none" stroke-linecap="round"/>`;
-  const mouth = mood === "sleep" ? `<path d="M56 82q4 3 8 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`
-    : mood === "wow" ? `<path d="M52 80q8 11 16 0z" fill="${ink}"/>`
-    : mood === "calm" ? `<path d="M54 82q6 4 12 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`
-    : `<path d="M51 80q9 9 18 0" stroke="${ink}" stroke-width="3.500" fill="none" stroke-linecap="round"/>`;
-  const extra = mood === "sleep" ? `<text x="92" y="38" style="font-family:var(--f-display)" font-size="15" font-weight="700" fill="${ink}" opacity=".55">z</text><text x="102" y="26" style="font-family:var(--f-display)" font-size="11" font-weight="700" fill="${ink}" opacity=".4">z</text>`
-    : mood === "wow" ? `<path d="M98 34l2.500 6 6 2.500-6 2.500-2.500 6-2.500-6-6-2.500 6-2.500z" fill="#fff"/><path d="M18 44l1.600 4 4 1.600-4 1.600-1.600 4-1.600-4-4-1.600 4-1.600z" fill="#fff"/>` : "";
-  return `<svg class="mascot ${live ? "live" : ""}" width="${size}" height="${size * 0.92}" viewBox="0 0 120 110" aria-hidden="true">
-    <path d="M60 36c-2-12 2-20 12-25 3 10 0 19-12 25z" fill="#2E8B47"/><path d="M60 36c0-11-5-18-15-21-2 10 2 18 15 21z" fill="#3FA65A"/>
-    <path d="M8 110C8 62 34 34 60 34s52 28 52 76z" fill="${b}"/>
-    <circle cx="36" cy="82" r="6" fill="#FF9F8A" opacity=".55"/><circle cx="84" cy="82" r="6" fill="#FF9F8A" opacity=".55"/>${eyes}${mouth}${extra}</svg>`;
+/* ================= controles fáceis: setas para horário, − e + para números ================= */
+function tpick(name, value, opt) {
+  opt = opt || {}; const step = opt.step || 5, empty = !value;
+  const [h, m] = empty ? ["--", "--"] : value.split(":");
+  return `<div class="tpick ${opt.small ? "sm" : ""}" data-step="${step}" data-def="${opt.def || "21:00"}">
+    <input type="hidden" ${opt.id ? `id="${opt.id}"` : ""} ${name ? `name="${name}"` : ""} value="${value || ""}">
+    <div class="tcol"><button type="button" data-tp="h+1" aria-label="Mais uma hora">${IC.up()}</button><b class="tv-h num">${h}</b><button type="button" data-tp="h-1" aria-label="Menos uma hora">${IC.down()}</button></div>
+    <span class="tsep">:</span>
+    <div class="tcol"><button type="button" data-tp="m+" aria-label="Mais ${step} minutos">${IC.up()}</button><b class="tv-m num">${m}</b><button type="button" data-tp="m-" aria-label="Menos ${step} minutos">${IC.down()}</button></div>
+    ${opt.clear ? `<button type="button" class="tclear" data-tp="clear" ${empty ? "hidden" : ""}>Limpar</button>` : ""}
+  </div>`;
 }
+function nstep(attrs, value, opt) {
+  return `<div class="nstep" data-step="${opt.step}" data-min="${opt.min}" data-max="${opt.max}" data-dec="${opt.dec || 0}">
+    <button type="button" data-ns="-1" aria-label="Diminuir">−</button><input ${attrs} type="text" inputmode="${opt.dec ? "decimal" : "numeric"}" autocomplete="off" value="${value}"><button type="button" data-ns="1" aria-label="Aumentar">+</button></div>`;
+}
+document.addEventListener("click", e => {
+  const tb = e.target.closest("[data-tp]");
+  if (tb) {
+    const box = tb.closest(".tpick"), inp = box.querySelector("input"), step = +box.dataset.step, act = tb.dataset.tp;
+    if (act === "clear") inp.value = "";
+    else {
+      let t = inp.value ? toMin(inp.value) : toMin(box.dataset.def);
+      if (inp.value || act) {
+        if (!inp.value) t = toMin(box.dataset.def);
+        else if (act === "h+1") t += 60; else if (act === "h-1") t -= 60;
+        else if (act === "m+") t = Math.floor(t / step) * step + step; else if (act === "m-") t = Math.ceil(t / step) * step - step;
+      }
+      inp.value = fromMin(t);
+    }
+    const [h, m] = inp.value ? inp.value.split(":") : ["--", "--"];
+    box.querySelector(".tv-h").textContent = h; box.querySelector(".tv-m").textContent = m;
+    const c = box.querySelector(".tclear"); if (c) c.hidden = !inp.value;
+    inp.dispatchEvent(new Event("input", { bubbles: true })); inp.dispatchEvent(new Event("change", { bubbles: true }));
+    e.preventDefault(); return;
+  }
+  const nb = e.target.closest("[data-ns]");
+  if (nb) {
+    const box = nb.closest(".nstep"), inp = box.querySelector("input"), dec = +box.dataset.dec;
+    const cur = num(inp.value, -1e9, 1e9, +box.dataset.min);
+    const v = clamp(Math.round((cur + +nb.dataset.ns * +box.dataset.step) * 10) / 10, +box.dataset.min, +box.dataset.max);
+    inp.value = dec ? dec_(v) : String(Math.round(v));
+    inp.dispatchEvent(new Event("input", { bubbles: true }));
+    e.preventDefault();
+  }
+}, true);
+const dec_ = v => String(+(+v).toFixed(1)).replace(".", ",");
+
+/* ================= mascote: Broto ================= */
+let _mid = 0;
+const STAGES = ["Semente", "Broto", "Muda", "Florzinha"];
+const stageOf = lvl => Math.min(3, Math.floor((lvl + 1) / 2));
+function mascot(mood, size, body, live, stage) {
+  const id = "mg" + (++_mid), ink = "#14240F";
+  stage = stage == null ? stageOf(progressCache ? progressCache.lvl : 0) : stage;
+  const eyes = mood === "sleep"
+    ? `<path d="M36 74q9 8 18 0M66 74q9 8 18 0" stroke="${ink}" stroke-width="4" fill="none" stroke-linecap="round"/>`
+    : `<ellipse cx="45" cy="71" rx="11" ry="${mood === "wow" ? 14 : 13}" fill="#fff"/><ellipse cx="75" cy="71" rx="11" ry="${mood === "wow" ? 14 : 13}" fill="#fff"/>
+       <circle cx="${mood === "calm" ? 45 : 47}" cy="${mood === "calm" ? 76 : 73}" r="${mood === "wow" ? 8 : 7}" fill="${ink}"/><circle cx="${mood === "calm" ? 75 : 77}" cy="${mood === "calm" ? 76 : 73}" r="${mood === "wow" ? 8 : 7}" fill="${ink}"/>
+       <circle cx="${mood === "calm" ? 48 : 50}" cy="${mood === "calm" ? 72 : 69}" r="2.600" fill="#fff"/><circle cx="${mood === "calm" ? 78 : 80}" cy="${mood === "calm" ? 72 : 69}" r="2.600" fill="#fff"/>`;
+  const mouth = mood === "sleep" ? `<path d="M55 90q5 3 10 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`
+    : mood === "wow" ? `<path d="M51 88q9 13 18 0z" fill="${ink}"/><path d="M55 93q5 4 10 0" fill="#FF8C8C"/>`
+    : mood === "calm" ? `<path d="M55 91q5 3 10 0" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`
+    : `<path d="M52 89q8 8 16 0" stroke="${ink}" stroke-width="3.500" fill="none" stroke-linecap="round"/>`;
+  const zz = mood === "sleep" ? `<text x="96" y="40" font-size="16" font-weight="700" fill="${ink}" opacity=".5" style="font-family:var(--f-display)">z</text><text x="106" y="28" font-size="11" font-weight="700" fill="${ink}" opacity=".35">z</text>` : "";
+  const spark = mood === "wow" ? `<path d="M100 40l2.500 6 6 2.500-6 2.500-2.500 6-2.500-6-6-2.500 6-2.500z" fill="#FFE27A"/><path d="M14 52l1.800 4 4 1.800-4 1.800-1.800 4-1.800-4-4-1.800 4-1.800z" fill="#FFE27A"/>` : "";
+  const sc = [0.62, 0.8, 1, 1][stage];
+  const leaves = `<g transform="translate(60 40) scale(${sc}) translate(-60 -40)">
+      <path d="M60 40c-1-12 5-21 18-25 2 12-4 21-18 25z" fill="url(#${id}l)"/><path d="M60 40c-1-11-7-19-19-21-1 12 5 19 19 21z" fill="url(#${id}l)" opacity=".9"/>
+      <path d="M60 40c-1-12 5-21 18-25" stroke="#2E7D3A" stroke-width="1.200" fill="none" opacity=".35"/></g>`;
+  const flower = stage >= 3 ? `<g transform="translate(78 16)">${[0, 72, 144, 216, 288].map(a => `<ellipse cx="0" cy="-6" rx="4.500" ry="6.500" fill="#FF9EC0" transform="rotate(${a})"/>`).join("")}<circle r="4" fill="#FFD64D"/></g>` : "";
+  return `<svg class="mascot ${live ? "live" : ""}" width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true">
+    <defs>
+      <radialGradient id="${id}b" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="${body || "#F3FFD0"}"/><stop offset=".55" stop-color="#BDF06A"/><stop offset="1" stop-color="#6FC24B"/></radialGradient>
+      <linearGradient id="${id}l" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6FD06A"/><stop offset="1" stop-color="#2E8B47"/></linearGradient>
+    </defs>
+    <ellipse cx="60" cy="114" rx="34" ry="4.500" fill="#000" opacity=".12"/>
+    ${leaves}${flower}
+    <path d="M60 38c27 0 47 24 47 52 0 18-17 24-47 24S13 108 13 90c0-28 20-52 47-52z" fill="url(#${id}b)"/>
+    <ellipse cx="40" cy="56" rx="12" ry="8" fill="#fff" opacity=".55" transform="rotate(-30 40 56)"/>
+    <ellipse cx="32" cy="88" rx="7" ry="4.500" fill="#FF8FA3" opacity=".45"/><ellipse cx="88" cy="88" rx="7" ry="4.500" fill="#FF8FA3" opacity=".45"/>
+    ${eyes}${mouth}${zz}${spark}</svg>`;
+}
+let progressCache = null;
 function moodNow(score) {
   const p = effP(), n = nowMin(), B = toMin(p.bed), W = toMin(p.wake);
   const asleep = B > W ? (n >= B || n < W) : (n >= B && n < W);
@@ -771,7 +842,7 @@ function renderComida() {
     </div></details>
   </div>
   ${plan.map(m => `<section class="card" id="f-${m.id}">
-    <div class="ficha-head"><div class="stack" style="gap:2px"><span class="time">${fromMin(m.min)}${m.auto ? "" : " · seu horário"}</span><h2>${m.n}</h2></div><div class="row" style="gap:8px">${d.meals[m.id] != null ? '<span class="pill good">Feita</span>' : ""}<button class="iconbtn" data-a="mealedit" data-id="${m.id}" aria-label="Editar fichas e horário de ${esc(m.n)}" title="Editar fichas e horário">${IC.edit(17)}</button></div></div>
+    <div class="ficha-head"><div class="stack" style="gap:2px"><span class="time">${fromMin(m.min)}${m.auto ? "" : " · seu horário"}</span><h2>${m.n}</h2></div><div class="row" style="gap:8px">${d.meals[m.id] != null ? '<span class="pill good">Feita</span>' : ""}<button class="btn sm ghost" data-a="mealedit" data-id="${m.id}" aria-label="Editar fichas e horário de ${esc(m.n)}">${IC.edit(15)} Editar</button></div></div>
     <div class="opts">${m.options.map((o, i) => o.hidden ? "" : optCard(m, o, i, entryOf(d, m.id))).join("")}</div>
     <div class="ficha-foot"><span class="swipe-hint">Deslize para ver as ${m.options.filter(o => !o.hidden).length} opções</span><button class="btn sm ghost" data-a="ficha" data-id="${m.id}">Comi outra coisa</button></div>
   </section>`).join("")}
@@ -837,6 +908,26 @@ function weightChart(I) {
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Peso registrado e rota da meta">${s}</svg></div>
     <div class="legend"><span><i style="background:var(--food)"></i>seu peso</span>${g.type !== "manter" ? '<span><i style="background:var(--amber)"></i>rota da meta</span>' : ""}</div>`;
 }
+function petCard(P, week) {
+  const { T, plan } = ctx(), k = todayKey(), d = getDay(k), eat = eatenOn(k, plan), H = habitList();
+  const st = stageOf(P.lvl), nextSt = st < 3 ? STAGES[st + 1] : null;
+  let needLvl = P.lvl; while (needLvl + 1 < LEVELS.length && stageOf(needLvl) === st) needLvl++;
+  const toNext = nextSt && LEVELS[needLvl] ? Math.max(0, LEVELS[needLvl][0] - P.xp) : 0;
+  const tasks = [
+    ["Registrar a noite", !!sleepOf(k), 25], ["Fazer todas as refeições", eat.n >= plan.length, 35],
+    ["Beber a água da meta", (d.water || 0) >= T.water, 15], ["Marcar todos os hábitos", H.every(h => d.habits[h.id]), 15], ["Bater a proteína do dia", eat.prot >= T.prot * 0.9, 10]
+  ];
+  return `<section class="pet">
+    <div class="pet-top"><div><span class="eyebrow">Sequência</span><div class="pet-streak num">${P.streak}<small> ${P.streak === 1 ? "dia" : "dias"}</small></div></div><span class="pill">Nível ${P.lvl + 1} · ${P.name}</span></div>
+    <div class="pet-hero">${mascot(moodNow(P.scores[k] || 0), 150, null, true, st)}</div>
+    <div class="pet-name">${STAGES[st]}</div>
+    <div class="pet-bar"><span style="width:${Math.max(4, P.pct * 100)}%"></span></div>
+    <p class="pet-sub">${nextSt ? `Faltam <b class="num">${fmt(toNext)} pontos</b> para virar ${nextSt.toLowerCase()}` : `Forma máxima. Continue cuidando dele.`}</p>
+    <div class="week">${week.map(w => { const dd = parseKey(w.k), l = w.s >= 80 ? "l3" : w.s >= 50 ? "l2" : w.s > 0 ? "l1" : "";
+      return `<div class="wd ${w.k === k ? "today" : ""}"><span>${WD[dd.getDay()][0].toUpperCase()}</span><div class="sq ${l}">${w.s >= 50 ? IC.check(13) : w.s || ""}</div></div>`; }).join("")}</div>
+    <div class="pet-tasks"><b>Faça seu Broto crescer hoje</b>${tasks.map(([t, ok, pts]) => `<div class="ptask ${ok ? "on" : ""}"><span class="pc">${ok ? IC.check(13) : ""}</span><span>${t}</span><small>+${pts}</small></div>`).join("")}</div>
+  </section>`;
+}
 function renderMeta() {
   const { T } = ctx(), I = goalInfo(), g = S.goal, P = progress();
   const week = []; for (let i = 6; i >= 0; i--) { const k = keyOf(addDays(new Date(), -i)); week.push({ k, s: P.scores[k] || 0 }); }
@@ -871,14 +962,7 @@ function renderMeta() {
       <p class="small muted">Pese-se de manhã, depois do banheiro, antes de comer. O que vale é a média da semana.</p></div>
    </div>
    <div class="col">
-    <div class="card">
-      <div class="row between"><span class="eyebrow">Nível ${P.lvl + 1}</span><span class="pill sleep">${IC.flame(13)} ${P.streak} ${P.streak === 1 ? "dia" : "dias"}</span></div>
-      <div class="row between" style="align-items:baseline"><h2 style="font-size:24px">${P.name}</h2><span class="small muted num">${fmt(P.xp)} pts${P.nxt ? ` · faltam ${fmt(P.nxt - P.xp)}` : ""}</span></div>
-      <div class="bar" style="height:9px"><span style="width:${Math.max(3, P.pct * 100)}%;background:var(--sleep)"></span></div>
-      <div class="week">${week.map(w => { const d = parseKey(w.k), l = w.s >= 80 ? "l3" : w.s >= 50 ? "l2" : w.s > 0 ? "l1" : "";
-        return `<div class="wd ${w.k === todayKey() ? "today" : ""}"><span>${WD[d.getDay()][0].toUpperCase()}</span><div class="sq ${l}">${w.s || ""}</div></div>`; }).join("")}</div>
-      <details><summary>Como os pontos funcionam</summary><div class="stack"><p>Cada dia vale até 100 pontos: refeições (35), sono (25), água (15), hábitos (15) e proteína (10). A sequência conta dias com 50 ou mais, e uma falta por semana não quebra.</p></div></details>
-    </div>
+    ${petCard(P, week)}
     <div class="card"><div class="row between"><h2>Conquistas</h2><span class="small muted">${got.length} de ${BADGES.length}</span></div>
       <div class="badges">${[...got, ...locked].slice(0, 8).map(badge).join("")}</div>
       ${BADGES.length > 8 ? `<details><summary>Ver todas</summary><div class="badges" style="margin-top:14px">${[...got, ...locked].slice(8).map(badge).join("")}</div></details>` : ""}
@@ -892,16 +976,16 @@ function profileFields(p, prefix) {
   return `<div class="field"><label for="${prefix}-name">Nome</label><input id="${prefix}-name" name="name" value="${esc(p.name)}" placeholder="Como quer ser chamado" autocomplete="given-name"></div>
     <div class="field"><span class="lab">Sexo (muda a fórmula de gasto)</span><div class="seg" data-seg="sex"><button type="button" class="${p.sex === "m" ? "on" : ""}" data-v="m">Masculino</button><button type="button" class="${p.sex === "f" ? "on" : ""}" data-v="f">Feminino</button></div></div>
     <div class="grid3">
-      <div class="field"><label for="${prefix}-age">Idade</label><input id="${prefix}-age" name="age" type="number" inputmode="numeric" min="14" max="90" value="${p.age}"></div>
-      <div class="field"><label for="${prefix}-height">Altura (cm)</label><input id="${prefix}-height" name="height" type="number" inputmode="numeric" min="130" max="220" value="${p.height}"></div>
-      <div class="field"><label for="${prefix}-weight">Peso (kg)</label><input id="${prefix}-weight" name="weight" type="text" inputmode="decimal" autocomplete="off" value="${dec(currentWeight())}"></div>
+      <div class="field"><label for="${prefix}-age">Idade</label>${nstep(`id="${prefix}-age" name="age"`, p.age, { step: 1, min: 14, max: 90 })}</div>
+      <div class="field"><label for="${prefix}-height">Altura (cm)</label>${nstep(`id="${prefix}-height" name="height"`, p.height, { step: 1, min: 130, max: 220 })}</div>
+      <div class="field"><label for="${prefix}-weight">Peso (kg)</label>${nstep(`id="${prefix}-weight" name="weight"`, dec(currentWeight()), { step: 0.5, min: 35, max: 200, dec: 1 })}</div>
     </div>
     <div class="field"><label for="${prefix}-train">Treinos por semana</label><select id="${prefix}-train" name="train">${[0, 1, 2, 3, 4, 5, 6, 7].map(n => `<option value="${n}" ${+p.train === n ? "selected" : ""}>${n === 0 ? "Não treino" : n + "×"}</option>`).join("")}</select></div>
     <div class="grid2">
-      <div class="field"><label for="${prefix}-bed">Quero dormir às</label><input id="${prefix}-bed" name="bed" type="time" value="${p.bed}"></div>
-      <div class="field"><label for="${prefix}-wake">Quero acordar às</label><input id="${prefix}-wake" name="wake" type="time" value="${p.wake}"></div>
+      <div class="field"><span class="lab">Quero dormir às</span>${tpick("bed", p.bed, { step: 15 })}</div>
+      <div class="field"><span class="lab">Quero acordar às</span>${tpick("wake", p.wake, { step: 15 })}</div>
     </div>
-    <div class="field"><label for="${prefix}-bednow">Hoje costumo dormir às (opcional)</label><input id="${prefix}-bednow" name="bedNow" type="time" value="${p.bedNow || ""}"><span class="small muted">Se for mais tarde que a meta, o app adianta 15 minutos a cada 2 dias até chegar lá.</span></div>`;
+    <div class="field"><span class="lab">Hoje costumo dormir às (opcional)</span>${tpick("bedNow", p.bedNow || "", { step: 15, clear: true, def: fromMin(toMin(p.bed) + 60) })}<span class="small muted">Se for mais tarde que a meta, o app adianta 15 minutos a cada 2 dias até chegar lá.</span></div>`;
 }
 function readProfile(f) {
   const v = n => f.querySelector(`[name="${n}"]`).value, seg = n => { const b = f.querySelector(`[data-seg="${n}"] .on`); return b ? b.dataset.v : null; };
@@ -930,7 +1014,7 @@ function renderPerfil() {
       <p class="small muted">Automático segue o modo do seu aparelho.</p></div>
     <form class="card" id="hf" autocomplete="off"><h2>Refeições e horários</h2>
       <p class="small muted" style="margin-top:-6px">Os horários automáticos seguem sua hora de acordar e de dormir. Mude o que quiser.</p>
-      <div class="mlist">${mealPlan(T, true).map(m => `<div class="mrow"><label class="mcheck"><input type="checkbox" name="on-${m.id}" ${m.off ? "" : "checked"}><span>${esc(m.n)}</span></label><input type="time" name="t-${m.id}" value="${fromMin(m.min)}" aria-label="Horário de ${esc(m.n)}"></div>`).join("")}</div>
+      <div class="mlist">${mealPlan(T, true).map(m => `<div class="mrow"><label class="mcheck"><input type="checkbox" name="on-${m.id}" ${m.off ? "" : "checked"}><span>${esc(m.n)}</span></label>${tpick("t-" + m.id, fromMin(m.min), { step: 15, small: true })}</div>`).join("")}</div>
       <div class="row" style="gap:8px"><button class="btn block" type="submit" style="flex:1">Salvar horários</button><button class="btn ghost" type="button" data-a="autotimes">Automáticos</button></div>
     </form>
     <div class="card"><h2>Meta de peso</h2>
@@ -973,7 +1057,7 @@ function sleepSheet(k) {
     const draw = () => { const st = sheetState;
       box.innerHTML = `<div class="grab"></div>
       <div class="row between"><div><span class="eyebrow">${d.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "short" })}</span><h2>Como foi a noite?</h2></div><span class="pill sleep num" id="s-dur">${durLong(sleepDur(st))}</span></div>
-      <div class="grid2"><div class="field"><label for="s-bed">Dormi às</label><input id="s-bed" type="time" value="${st.bed}"></div><div class="field"><label for="s-wake">Acordei às</label><input id="s-wake" type="time" value="${st.wake}"></div></div>
+      <div class="grid2"><div class="field"><span class="lab">Dormi às</span>${tpick("", st.bed, { id: "s-bed", step: 5 })}</div><div class="field"><span class="lab">Acordei às</span>${tpick("", st.wake, { id: "s-wake", step: 5 })}</div></div>
       <div class="field"><span class="lab">Quanto tempo para pegar no sono</span><div class="seg">${[[5, "< 10 min"], [15, "10–20"], [30, "20–40"], [50, "40+"]].map(([v, l]) => `<button type="button" class="${st.lat === v ? "on" : ""}" data-lat="${v}">${l}</button>`).join("")}</div></div>
       <div class="field"><span class="lab">Qualidade</span><div class="faces">${QUAL.map((q, i) => `<button type="button" class="${st.q === i + 1 ? "on" : ""}" data-q="${i + 1}"><b>${i + 1}</b>${q}</button>`).join("")}</div></div>
       <div class="field"><span class="lab">Acordei no meio da noite</span><div class="seg">${[0, 1, 2, 3].map(n => `<button type="button" class="${Math.min(3, st.wakes) === n ? "on" : ""}" data-w="${n}">${n === 0 ? "Não" : n === 3 ? "3+" : n + "×"}</button>`).join("")}</div></div>
@@ -1060,15 +1144,16 @@ function mealEditSheet(id) {
     const draw = () => {
       _T = null; const { T } = ctx(), m = mealPlan(T, true).find(x => x.id === id), fi = FICHAS.find(x => x.id === id);
       box.innerHTML = `<div class="grab"></div><div><span class="eyebrow">Personalizar</span><h2>${m.n}</h2></div>
-      <div class="grid2"><div class="field"><label for="me-time">Horário</label><input id="me-time" type="time" value="${fromMin(m.min)}"></div>
-        <div class="field"><span class="lab">&nbsp;</span>${m.auto ? `<span class="small muted" style="padding-top:12px">Automático, pelo seu horário de acordar e dormir</span>` : `<button class="btn ghost" data-autotime="1">Voltar ao automático (${fromMin(autoMin(fi))})</button>`}</div></div>
+      <div class="grid2"><div class="field"><span class="lab">Horário</span>${tpick("", fromMin(m.min), { id: "me-time", step: 15 })}</div>
+        <div class="field"><span class="lab">&nbsp;</span>${m.auto ? `<span class="small muted autohint" style="padding-top:12px">Automático, pelo seu horário de acordar e dormir. Use as setas para mudar.</span>` : `<button class="btn ghost" data-autotime="1">Voltar ao automático (${fromMin(autoMin(fi))})</button>`}</div></div>
       <div class="field"><span class="lab">Fichas desta refeição</span><div class="elist">${m.options.map((o, i) => `<div class="erow ${o.hidden ? "off" : ""}"><span class="et"><b>${esc(o.t)}</b><small class="num">${o.kcal} kcal · ${o.prot} g proteína${o.hidden ? " · escondida" : o.cid ? " · sua" : o.edited ? " · editada" : ""}</small></span>
         <button class="btn sm ghost" data-edit="${o.cid ? "c:" + o.cid : o.key}">Editar</button>${o.cid ? "" : `<button class="btn sm ghost" data-hide="${o.key}">${o.hidden ? "Mostrar" : "Esconder"}</button>`}</div>`).join("")}</div></div>
       <button class="btn food block" data-new="1">+ Nova ficha</button>
       <button type="button" class="toggle" data-off="1"><span><b>Não faço esta refeição</b><br><span class="small muted">Some do plano. Dá para religar em Ajustes.</span></span><span class="sw"></span></button>`;
     };
     draw();
-    s.addEventListener("change", e => { if (e.target.id === "me-time" && e.target.value) { S.profile.mealTimes = { ...(S.profile.mealTimes || {}), [id]: e.target.value }; S.profile.u = Date.now(); commit(); draw(); render(); } });
+    let tt = null;
+    s.addEventListener("change", e => { if (e.target.id === "me-time" && e.target.value) { const v = e.target.value; clearTimeout(tt); tt = setTimeout(() => { S.profile.mealTimes = { ...(S.profile.mealTimes || {}), [id]: v }; S.profile.u = Date.now(); commit(); render(); const hint = box.querySelector(".autohint"); if (hint) hint.textContent = "Horário salvo"; }, 500); } });
     s.addEventListener("click", e => {
       const b = e.target.closest("button"); if (!b) return; e.stopPropagation();
       if (b.dataset.autotime) { const mt = { ...(S.profile.mealTimes || {}) }; delete mt[id]; S.profile.mealTimes = mt; S.profile.u = Date.now(); commit(); draw(); render(); }
@@ -1118,9 +1203,9 @@ function afterScore(before) { _T = null; const now = dayScore(curDay); if (befor
 function weightSheet() {
   openSheet((s, box) => {
     box.innerHTML = `<div class="grab"></div><div><span class="eyebrow">Peso de hoje</span><h2>Quanto você pesa?</h2></div>
-      <div class="field"><label for="w-kg">Peso em kg</label><input id="w-kg" type="text" inputmode="decimal" autocomplete="off" value="${dec(currentWeight())}"></div>
+      <div class="field"><label for="w-kg">Peso em kg</label>${nstep(`id="w-kg"`, dec(currentWeight()), { step: 0.1, min: 30, max: 250, dec: 1 })}</div>
       <p class="small muted">De manhã, depois do banheiro e antes de comer.</p><button class="btn amber block" id="w-save">Salvar</button>`;
-    const inp = box.querySelector("#w-kg"); setTimeout(() => { inp.focus(); inp.select(); }, 60);
+    const inp = box.querySelector("#w-kg");
     const saveW = () => { const kg = num(inp.value, 30, 250, null); if (kg == null) { inp.focus(); return; }
       const prev = currentWeight(); setWeight(kg); commit(); closeSheet(true); render();
       const diff = kg - prev; toast(Math.abs(diff) < 0.05 ? "Peso salvo." : `Peso salvo: ${sign(diff)} kg desde o último. Fichas reajustadas.`); };
@@ -1132,8 +1217,8 @@ function goalFields(g, cur) {
   const kg = Math.abs(g.target - g.start) || 4, months = Math.max(1, Math.round(daysBetween(g.startDate, g.endDate) / 30.4));
   return `<div class="field"><span class="lab">O que você quer?</span><div class="seg" data-seg="gtype">${Object.entries(GOALS).map(([k, v]) => `<button type="button" class="${g.type === k ? "on" : ""}" data-v="${k}">${v.label}</button>`).join("")}</div></div>
     <div class="grid2" id="g-nums" ${g.type === "manter" ? "hidden" : ""}>
-      <div class="field"><label for="g-kg">Quantos kg</label><input id="g-kg" name="gkg" type="text" inputmode="decimal" autocomplete="off" value="${dec(kg)}"></div>
-      <div class="field"><label for="g-mo">Em quantos meses</label><input id="g-mo" name="gmo" type="number" inputmode="numeric" step="1" min="1" max="36" value="${months}"></div>
+      <div class="field"><label for="g-kg">Quantos kg</label>${nstep(`id="g-kg" name="gkg"`, dec(kg), { step: 0.5, min: 0.5, max: 60, dec: 1 })}</div>
+      <div class="field"><label for="g-mo">Em quantos meses</label>${nstep(`id="g-mo" name="gmo"`, months, { step: 1, min: 1, max: 36 })}</div>
     </div><div id="g-preview"></div>`;
 }
 function readGoal(root, weight) {
@@ -1157,10 +1242,37 @@ function goalSheet() {
       <p class="small muted">A meta recomeça a contar a partir de hoje, do seu peso atual.</p><button class="btn amber block" id="g-save">Salvar meta</button>`;
     goalPreview(box, w);
     s.addEventListener("input", () => goalPreview(box, w));
-    s.addEventListener("click", e => { if (e.target.closest(".seg")) setTimeout(() => goalPreview(box, w), 0);
+    s.addEventListener("click", e => { if (e.target.closest(".seg,.nstep")) setTimeout(() => goalPreview(box, w), 0);
       if (e.target.closest("#g-save")) { S.goal = readGoal(box, w); if (!S.weights[todayKey()]) setWeight(w); commit(); closeSheet(true); render(); toast("Meta salva. Calorias e fichas reajustadas."); } });
   });
 }
+
+/* ================= ações rápidas ================= */
+function quickSheet() {
+  const { T, plan } = ctx(), d = getDay(), next = plan.find(m => d.meals[m.id] == null);
+  openSheet((s, box) => {
+    box.innerHTML = `<div class="grab"></div><h2>O que você quer registrar?</h2>
+      <div class="qgrid">
+        <button class="qbtn" data-q="sleep"><span class="ric sleep">${IC.moon(22)}</span><b>Minha noite</b><small>${sleepOf(curDay) ? "Editar" : "Como dormi"}</small></button>
+        <button class="qbtn" data-q="meal" ${next ? "" : "disabled"}><span class="ric food">${IC.bowl(22)}</span><b>Refeição</b><small>${next ? esc(next.n) : "Todas feitas"}</small></button>
+        <button class="qbtn" data-q="water"><span class="ric sleep">${IC.drop(22)}</span><b>+1 copo de água</b><small class="num">${d.water || 0} de ${T.water}</small></button>
+        <button class="qbtn" data-q="weight"><span class="ric amber">${IC.scale(22)}</span><b>Meu peso</b><small class="num">${dec(currentWeight())} kg</small></button>
+        <button class="qbtn" data-q="shop"><span class="ric food">${IC.cart(22)}</span><b>Lista de compras</b><small>Adicionar item</small></button>
+        <button class="qbtn" data-q="gut"><span class="ric amber">${IC.check(18)}</span><b>Fui ao banheiro</b><small class="num">${d.gut || 0} hoje</small></button>
+      </div>`;
+    s.addEventListener("click", e => {
+      const b = e.target.closest("[data-q]"); if (!b) return; e.stopPropagation(); const q = b.dataset.q;
+      closeSheet(true);
+      if (q === "sleep") sleepSheet();
+      else if (q === "meal" && next) fichaSheet(next.id);
+      else if (q === "water") { const before = dayScore(curDay); editDay(x => { x.water = (x.water || 0) + 1; }); render(); toast(`Água: ${getDay().water} de ${T.water} copos`); afterScore(before); }
+      else if (q === "weight") weightSheet();
+      else if (q === "gut") { editDay(x => { x.gut = (x.gut || 0) + 1; }); render(); toast("Registrado."); }
+      else if (q === "shop") { go("compras"); setTimeout(() => { const i = $("#shop-in"); if (i) i.focus(); }, 80); }
+    });
+  });
+}
+window.addEventListener("scroll", () => { const t = $("#totop"); if (t) t.hidden = window.scrollY < 500; }, { passive: true });
 
 /* ================= feedback ================= */
 function toast(msg) { const old = $(".toast"); if (old) old.remove(); const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2800); }
@@ -1229,6 +1341,8 @@ document.addEventListener("click", e => {
     render();
   }
   else if (a === "mealedit") mealEditSheet(b.dataset.id);
+  else if (a === "quick") quickSheet();
+  else if (a === "totop") window.scrollTo({ top: 0, behavior: "smooth" });
   else if (a === "autotimes") { S.profile.mealTimes = {}; S.profile.u = Date.now(); commit(); render(); toast("Horários automáticos de volta."); }
   else if (a === "shop-toggle") { const x = S.shop[b.dataset.id]; if (x) { x.done = x.done ? 0 : 1; x.u = Date.now(); commit(); render(); } }
   else if (a === "shop-del") { S.shop[b.dataset.id] = { del: true, u: Date.now() }; commit(); render(); }
@@ -1272,9 +1386,11 @@ function render() {
   const app = $("#app"), bar = $("#tabbar");
   if (HAS_CLOUD && !uid && view !== "app" && !flag("vigor.skipAuth")) view = "gate";
   if (view === "gate" && (!HAS_CLOUD || uid)) view = "app";
+  const fabs = $(".fabs"); if (fabs) fabs.hidden = view === "gate" || !S.profile.setup;
   if (view === "gate") { bar.hidden = true; app.innerHTML = renderGate(); return; }
   if (!S.profile.setup) { bar.hidden = true; app.innerHTML = renderOnb(); goalPreview(app, currentWeight()); return; }
   bar.hidden = false;
+  if (!$("#fab")) { const f = document.createElement("div"); f.className = "fabs"; f.innerHTML = `<button id="totop" class="totop" data-a="totop" hidden aria-label="Voltar ao topo">${IC.arrowup(20)}</button><button id="fab" class="fab" data-a="quick" aria-label="Registrar">${IC.plus(26)}</button>`; document.body.appendChild(f); }
   const P = progress(); checkBadges(P, !rendered); rendered = true;
   app.innerHTML = tab === "sono" ? renderSono() : tab === "comida" ? renderComida() : tab === "compras" ? `${header("Lista de compras", "O que falta comprar")}${renderCompras()}` : tab === "meta" ? renderMeta() : tab === "perfil" ? renderPerfil() : renderHoje();
   renderTabs(); renderSync();
